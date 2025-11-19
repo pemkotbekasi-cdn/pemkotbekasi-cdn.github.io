@@ -1,0 +1,3039 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>OKX Trading Dashboard</title>
+    <style>
+        body {
+            background: #000000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #64748b;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.8) 100%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        .container {
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(30px);
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.95), 0 0 40px rgba(30, 58, 138, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            padding: 30px;
+            margin-top: 50px;
+            border: 1px solid rgba(30, 41, 59, 0.6);
+            animation: fadeInUp 0.8s ease-out;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+                
+        h2 {
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .table {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            background: rgba(15, 23, 42, 0.9);
+        }
+        .table thead th {
+            background: linear-gradient(45deg, #0f172a, #1e293b);
+            color: #475569;
+            border: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.75rem;
+            padding: 0.5rem 0.25rem;
+            border-bottom: 2px solid #334155;
+        }
+        /* Debug CSS removed after verification */
+        .table tbody td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.8rem;
+            vertical-align: middle;
+            color: #374151;
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+        }
+        .table tbody tr:hover {
+            background-color: rgba(30, 41, 59, 0.8);
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+        }
+        .badge-buy {
+            background: #48bb78;
+        }
+        .badge-sell {
+            background: #f56565;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        .spinner-border {
+            color: #334155 !important;
+            border-color: rgba(51, 65, 85, 0.3) !important;
+            border-right-color: #64748b !important;
+        }
+        /* Override all Bootstrap white/light backgrounds */
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            background: #000000 !important;
+        }
+        .container, .card, .modal-content, .dropdown-menu, .popover, .tooltip {
+            background: rgba(10, 10, 15, 0.95) !important;
+            border-color: rgba(30, 41, 59, 0.6) !important;
+        }
+        .table {
+            background: rgba(15, 23, 42, 0.9) !important;
+        }
+        .form-control, .form-select, input, select, textarea {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-color: rgba(30, 41, 59, 0.8) !important;
+            color: #475569 !important;
+        }
+        .form-control:focus, .form-select:focus {
+            background: rgba(30, 41, 59, 0.98) !important;
+            border-color: #334155 !important;
+            color: #64748b !important;
+        }
+        .btn, .button {
+            background: rgba(30, 41, 59, 0.9) !important;
+            border-color: rgba(51, 65, 85, 0.8) !important;
+            color: #64748b !important;
+        }
+        .btn:hover, .button:hover {
+            background: rgba(51, 65, 85, 0.95) !important;
+            color: #94a3b8 !important;
+        }
+        /* Ensure no white backgrounds anywhere */
+        .bg-white, .bg-light {
+            background: #000000 !important;
+        }
+        .text-white {
+            color: #64748b !important;
+        }
+        .border-white, .border-light {
+            border-color: rgba(30, 41, 59, 0.6) !important;
+        }
+        /* Override any potential Bootstrap defaults */
+        .navbar, .navbar-brand, .navbar-nav .nav-link {
+            background: rgba(10, 10, 15, 0.98) !important;
+            color: #475569 !important;
+        }
+        .alert, .badge, .list-group-item {
+            background: rgba(15, 23, 42, 0.9) !important;
+            color: #64748b !important;
+            border-color: rgba(30, 41, 59, 0.6) !important;
+        }
+        /* Final comprehensive override for any remaining white elements */
+        * {
+            border-color: rgba(30, 41, 59, 0.6) !important;
+        }
+        body * {
+            background-color: transparent !important;
+        }
+        .container, .table, .form-control, .form-select, .nav-tabs, .tab-content {
+            background-color: rgba(10, 10, 15, 0.95) !important;
+        }
+        .durability-excellent {
+            color: #00ff88 !important;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(0, 255, 136, 1), 0 0 16px rgba(0, 255, 136, 0.5);
+        }
+        .durability-good {
+            color: #ffd700 !important;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 1), 0 0 16px rgba(255, 215, 0, 0.5);
+        }
+        .durability-poor {
+            color: #ff4757 !important;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255, 71, 87, 1), 0 0 16px rgba(255, 71, 87, 0.5);
+        }
+        .durability-neutral {
+            color: #374151 !important;
+        }
+        /* Recommendation styling */
+        .recommendation-buy {
+            color: #00ff88 !important;
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(0, 255, 136, 0.6);
+        }
+        .recommendation-sell {
+            color: #ff4757 !important;
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(255, 71, 87, 0.6);
+        }
+        .recommendation-hold {
+            color: #ffd700 !important;
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+        }
+        /* Dark theme form controls */
+        .form-control, .form-select {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(30, 41, 59, 0.8);
+            color: #475569;
+        }
+        .form-control:focus, .form-select:focus {
+            background: rgba(30, 41, 59, 0.98);
+            border-color: #334155;
+            color: #64748b;
+            box-shadow: 0 0 0 0.2rem rgba(30, 41, 59, 0.8);
+        }
+        .form-control::placeholder {
+            color: #1f2937;
+        }
+        /* Dark theme tabs */
+        .nav-tabs {
+            border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+        }
+        .nav-tabs .nav-link {
+            color: #374151;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-tabs .nav-link:hover {
+            color: #475569;
+            border-bottom-color: rgba(30, 41, 59, 0.9);
+        }
+        .nav-tabs .nav-link.active {
+            color: #64748b;
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom-color: #334155;
+        }
+        /* Dark theme labels */
+        .form-label {
+            color: #475569;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>🚀 OKX Trading Dashboard</h2>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>🆕 Fitur Baru!</strong> Volume Ratio % sekarang tersedia! Coba sorting by "📊 Vol Ratio % (2h)" untuk melihat rasio Buy vs Sell dalam skala persentase.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <label class="form-label">🔍 Filter by Coin (per-tab)</label>
+                <div id="filterContainer">
+                    <input type="text" class="form-control filter-input" id="coinFilter_summary" placeholder="e.g., BTC, ETH">
+                    <input type="text" class="form-control filter-input d-none" id="coinFilter_volume" placeholder="e.g., BTC, ETH">
+                    <input type="text" class="form-control filter-input d-none" id="coinFilter_volDur" placeholder="e.g., BTC, ETH">
+                    <input type="text" class="form-control filter-input d-none" id="coinFilter_spikes" placeholder="e.g., BTC, ETH">
+                    <input type="text" class="form-control filter-input d-none" id="coinFilter_recs" placeholder="e.g., BTC, ETH">
+                    <input type="text" class="form-control filter-input d-none" id="coinFilter_alerts" placeholder="e.g., BTC, ETH">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label for="limitInput" class="form-label">📊 Limit Rows</label>
+                <input type="number" class="form-control" id="limitInput" placeholder="Enter row limit" min="1" value="5">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="persistHistoryToggle" checked>
+                    <label class="form-check-label" for="persistHistoryToggle">💾 Persist History (LocalStorage)</label>
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div>
+                    <small class="text-muted">🔔 Alerts configurable in the <strong>Alerts</strong> tab.</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label for="sortBy" class="form-label">📊 Sort By <span class="badge bg-success">NEW: Vol Ratio %</span></label>
+                <div class="form-text small text-muted">Note: feed no longer provides frequency fields — "Activity" sorts use volume as a proxy.</div>
+                <select class="form-select" id="sortBy">
+                    <optgroup label="📈 Durability">
+                        <option value="vol_dur_2h">% Vol Durability (2h)</option>
+                        <option value="freq_dur_2h">% Activity Durability (2h, vol proxy)</option>
+                    </optgroup>
+                    <optgroup label="💰 Price & Change">
+                        <option value="change">% Change</option>
+                        <option value="price">Price</option>
+                        <option value="price_position">Price Position (0-100)</option>
+                        <option value="recommendation">Recommendation Score</option>
+                    </optgroup>
+
+                    
+                    <optgroup label="💥 Volume (1m)">
+                        <option value="vol_buy_1m">Vol Buy (1m)</option>
+                        <option value="vol_sell_1m">Vol Sell (1m)</option>
+                        <option value="vol_total_1m">Vol Total (1m)</option>
+                        <option value="avg_vol_buy_1m">Avg Vol Buy (1m)</option>
+                        <option value="avg_vol_sell_1m">Avg Vol Sell (1m)</option>
+                    </optgroup>
+
+                    <optgroup label="💹 Volume (5m)">
+                        <option value="vol_buy_5m">Vol Buy (5m)</option>
+                        <option value="vol_sell_5m">Vol Sell (5m)</option>
+                        <option value="vol_total_5m">Vol Total (5m)</option>
+                        <option value="avg_vol_buy_5m">Avg Vol Buy (5m)</option>
+                        <option value="avg_vol_sell_5m">Avg Vol Sell (5m)</option>
+                    </optgroup>
+ 
+                    <optgroup label="💹 Volume (10m)">
+                        <option value="vol_buy_10m">Vol Buy (10m)</option>
+                        <option value="vol_sell_10m">Vol Sell (10m)</option>
+                        <option value="vol_total_10m">Vol Total (10m)</option>
+                        <option value="avg_vol_buy_10m">Avg Vol Buy (10m)</option>
+                        <option value="avg_vol_sell_10m">Avg Vol Sell (10m)</option>
+                    </optgroup>
+  
+                    
+                    <optgroup label="💹 Volume (15m)">
+                        <option value="vol_buy_15m">Vol Buy (15m)</option>
+                        <option value="vol_sell_15m">Vol Sell (15m)</option>
+                        <option value="vol_total_15m">Vol Total (15m)</option>
+                        <option value="avg_vol_buy_15m">Avg Vol Buy (15m)</option>
+                        <option value="avg_vol_sell_15m">Avg Vol Sell (15m)</option>
+                    </optgroup>
+ 
+                    
+                    <optgroup label="💹 Volume (20m)">
+                        <option value="vol_buy_20m">Vol Buy (20m)</option>
+                        <option value="vol_sell_20m">Vol Sell (20m)</option>
+                        <option value="vol_total_20m">Vol Total (20m)</option>
+                        <option value="avg_vol_buy_20m">Avg Vol Buy (20m)</option>
+                        <option value="avg_vol_sell_20m">Avg Vol Sell (20m)</option>
+                    </optgroup>
+          
+                    
+                    <optgroup label="💰 Volume (30m)">
+                        <option value="vol_buy_30m">Vol Buy (30m)</option>
+                        <option value="vol_sell_30m">Vol Sell (30m)</option>
+                        <option value="vol_total_30m">Vol Total (30m)</option>
+                        <option value="avg_vol_buy_30m">Avg Vol Buy (30m)</option>
+                        <option value="avg_vol_sell_30m">Avg Vol Sell (30m)</option>
+                    </optgroup>
+          
+                    
+                    <optgroup label="📊 Volume (1h)">
+                        <option value="vol_buy_1h">Vol Buy (1h)</option>
+                        <option value="vol_sell_1h">Vol Sell (1h)</option>
+                        <option value="vol_total_1h">Vol Total (1h)</option>
+                        <option value="avg_vol_buy_1h">Avg Vol Buy (1h)</option>
+                        <option value="avg_vol_sell_1h">Avg Vol Sell (1h)</option>
+                    </optgroup>
+
+                    
+                    <optgroup label="📈 Volume (2h)">
+                        <option value="vol_buy_2h">Vol Buy (2h)</option>
+                        <option value="vol_sell_2h">Vol Sell (2h)</option>
+                        <option value="vol_total_2h">Vol Total (2h)</option>
+                        <option value="vol_ratio_2h" title="Volume Buy vs Sell Ratio in percentage (25% weight in recommendation)" selected>📊 Vol Ratio % (2h) - BUY/SELL Pressure ⭐</option>
+                        <option value="avg_vol_buy_2h">Avg Vol Buy (2h)</option>
+                        <option value="avg_vol_sell_2h">Avg Vol Sell (2h)</option>
+                    </optgroup>
+                    <optgroup label="📊 Sum Durability">
+                        <option value="sum_min_1_buy">Sum Min 1 Buy</option>
+                        <option value="sum_min_5_buy">Sum Min 5 Buy</option>
+                        <option value="sum_min_10_buy">Sum Min 10 Buy</option>
+                        <option value="sum_min_15_buy">Sum Min 15 Buy</option>
+                        <option value="sum_min_20_buy">Sum Min 20 Buy</option>
+                        <option value="sum_min_30_buy">Sum Min 30 Buy</option>
+                        <option value="sum_min_60_buy">Sum Min 60 Buy</option>
+                        <option value="sum_min_120_buy">Sum Min 120 Buy</option>
+                        <option value="sum_overall_buy">Sum Overall Buy</option>
+                    </optgroup>
+                    <option value="risk_score">⚖️ Risk Score</option>
+                    <optgroup label="💰 Volume Durability">
+                        <option value="vol_dur_1m">% Vol Dur 1m</option>
+                        <option value="vol_dur_5m">% Vol Dur 5m</option>
+                        <option value="vol_dur_10m">% Vol Dur 10m</option>
+                        <option value="vol_dur_15m">% Vol Dur 15m</option>
+                        <option value="vol_dur_20m">% Vol Dur 20m</option>
+                        <option value="vol_dur_30m">% Vol Dur 30m</option>
+                        <option value="vol_dur_60m">% Vol Dur 60m</option>
+                        <option value="vol_dur_120m">% Vol Dur 120m</option>
+                        <option value="vol_dur_overall">% Vol Dur Overall</option>
+                    </optgroup>
+                    <optgroup label="📈 Change Variations">
+                        <option disabled class="text-muted">Detailed change metrics not available from feed</option>
+                    </optgroup>
+                    <optgroup label="⏰ Update Times">
+                        <option value="update_freq">Update Time Freq</option>
+                        <option value="update_sum">Update Time Sum</option>
+                        <option value="update_general">Update Time General</option>
+                    </optgroup>
+                    <optgroup label="💵 Total Volumes">
+                        <option value="total_vol_fiat">Total Vol Fiat</option>
+                        <option value="total_vol">Total Volume</option>
+                    </optgroup>
+                    <optgroup label="⚡ Delay">
+                        <option value="delay_ms">Delay MS</option>
+                    </optgroup>
+                    <optgroup label="🌟 Overall (24h)">
+                        <option value="freq_dur_24h">% Activity Durability (24h, vol proxy)</option>
+                        <option value="vol_dur_24h">% Vol Durability (24h)</option>
+                        <option value="vol_buy_24h">Vol Buy (24h)</option>
+                        <option value="vol_sell_24h">Vol Sell (24h)</option>
+                        <option value="vol_total_24h">Vol Total (24h)</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">📈 Sort Order</label>
+                <div id="sortOrder" class="d-flex gap-2 align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="sortOrderRad" id="sortOrder_desc" value="desc" checked>
+                        <label class="form-check-label small" for="sortOrder_desc">Descending ⬇️</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="sortOrderRad" id="sortOrder_asc" value="asc">
+                        <label class="form-check-label small" for="sortOrder_asc">Ascending ⬆️</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Connecting to WebSocket...</p>
+        </div>
+
+        <ul class="nav nav-tabs" id="dataTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">📊 Summary</button>
+            </li>
+            <!-- Frequency tab removed per user request -->
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="volume-tab" data-bs-toggle="tab" data-bs-target="#volume" type="button" role="tab">📊 Volume</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="vol-dur-tab" data-bs-toggle="tab" data-bs-target="#volDur" type="button" role="tab">📈 Vol Dur</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="insight-tab" data-bs-toggle="tab" data-bs-target="#insight" type="button" role="tab">🔍 Insight</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">ℹ️ Info</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button" role="tab">🔔 Alerts</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="recs-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">🧭 Recs</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="spike-tab" data-bs-toggle="tab" data-bs-target="#spikes" type="button" role="tab">⚡ Spikes</button>
+            </li>
+        </ul>
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-outline-success me-2" onclick="quickSort('vol_ratio_2h')">
+                        🚀 Quick Sort: Vol Ratio %
+                    </button>
+                    <button class="btn btn-outline-info" onclick="showVolRatioInfo()">
+                        📚 Learn About Vol Ratio %
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        
+
+        <div class="tab-content mt-4" id="dataTabsContent">
+            <div class="tab-pane fade show active" id="summary" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="summaryTable">
+                        <thead>
+                            <tr>
+                                <th>🪙 Coin</th>
+                                <th>💰 Price</th>
+                                <th>📊 Change %</th>
+                                <th>📍 Price Pos</th>
+                                <th>🎯 Recommendation</th>
+                                <th>⚖️ Risk</th>
+                                <th>📊 Vol Ratio % (2h)</th>
+                                <th>📊 Vol Buy (2h)</th>
+                                <th>📊 Vol Sell (2h)</th>
+                                <th>⚖️ Vol Dur (2h)</th>
+                                <th>📊 Vol Buy (24h)</th>
+                                <th>📊 Vol Sell (24h)</th>
+                                <th>⏰ Update</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Frequency pane removed -->
+
+            <div class="tab-pane fade" id="volume" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="volTable">
+                        <thead>
+                            <tr>
+                                <th>🪙 Coin</th>
+                                <th>📊 Buy 1m</th>
+                                <th>📊 Sell 1m</th>
+                                <th>📊 Buy 5m</th>
+                                <th>📊 Sell 5m</th>
+                                <th>📊 Buy 10m</th>
+                                <th>📊 Sell 10m</th>
+                                <th>📊 Buy 15m</th>
+                                <th>📊 Sell 15m</th>
+                                <th>📊 Buy 20m</th>
+                                <th>📊 Sell 20m</th>
+                                <th>📊 Buy 30m</th>
+                                <th>📊 Sell 30m</th>
+                                <th>📊 Buy 60m</th>
+                                <th>📊 Sell 60m</th>
+                                <th>📊 Buy 120m</th>
+                                <th>📊 Sell 120m</th>
+                                <th>📊 Ratio %</th>
+                                <th>📊 Buy (24h)</th>
+                                <th>📊 Sell (24h)</th>
+                                <th>📊 Total (24h)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="volDur" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="volDurTable">
+                        <thead>
+                            <tr>
+                                <th>🪙 Coin</th>
+                                <th>1m</th>
+                                <th>5m</th>
+                                <th>10m</th>
+                                <th>15m</th>
+                                <th>20m</th>
+                                <th>30m</th>
+                                <th>1h</th>
+                                <th>24h</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volDurBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="insight" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div id="insightPane">
+                            <h4 class="text-info">🔍 Insight</h4>
+                            <div id="insightPaneBody" class="card bg-dark text-light p-3">
+                                <p class="text-muted">Select a coin from the Summary tab to see detailed insights here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="info" role="tabpanel">
+                <div id="infoRuntime" class="mb-3"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4 class="text-info mb-3">📊 <strong>Summary Tab - Kolom Utama</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                    <div class="d-flex gap-2 mb-3 align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="compactAlertsToggle">
+                                            <label class="form-check-label small" for="compactAlertsToggle">Compact banners (limit visible alerts)</label>
+                                        </div>
+                                        <div class="input-group input-group-sm" style="width:140px;">
+                                            <span class="input-group-text">Max</span>
+                                            <input type="number" id="maxAlertBanners" class="form-control" value="3" min="0">
+                                        </div>
+                                        <div>
+                                            <button id="showHiddenAlertsBtn" class="btn btn-sm btn-outline-secondary">Show hidden alerts</button>
+                                        </div>
+                                    </div>
+                                <h6 class="card-title text-warning">🪙 Coin</h6>
+                                <p class="card-text small">Nama cryptocurrency (BTC, ETH, dll)</p>
+
+                                <h6 class="card-title text-warning">💰 Price</h6>
+                                <p class="card-text small">Harga terakhir dalam USD</p>
+
+                                <h6 class="card-title text-warning">📊 Change %</h6>
+                                <p class="card-text small">Persentase perubahan harga dalam periode terakhir</p>
+
+                                <h6 class="card-title text-warning">📍 Price Pos</h6>
+                                <p class="card-text small">Posisi harga dalam range High-Low (0-100). 0 = di Low, 100 = di High</p>
+
+                                <h6 class="card-title text-warning">🎯 Recommendation</h6>
+                                <p class="card-text small">Rekomendasi BUY/SELL/HOLD berdasarkan algoritma AI dengan tingkat confidence</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4 class="text-info mb-3">⚖️ <strong>Durability Metrics</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-success">⚖️ Activity Dur (2h, vol proxy)</h6>
+                                <p class="card-text small">Activity Durability 2 jam - Konsistensi aktivitas trading (volume digunakan sebagai proxy untuk frekuensi)</p>
+
+                                <h6 class="card-title text-success">⚖️ Vol Dur (1m/5m/10m/15m/20m/30m/1h/24h)</h6>
+                                <p class="card-text small">Volume Durability - Kekuatan volume pembelian dalam timeframe tertentu</p>
+
+                                <div class="mt-2">
+                                    <span class="badge bg-success me-1">67-100%</span><small>Excellent</small><br>
+                                    <span class="badge bg-warning me-1">34-66%</span><small>Good</small><br>
+                                    <span class="badge bg-danger me-1">0-33%</span><small>Poor</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h4 class="text-info mb-3">📈 <strong>Frequency Tab</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-primary">📈 Buy/Sell 1m, 5m, 10m, 60m, 120m</h6>
+                                <p class="card-text small">Jumlah frekuensi pembelian/penjualan dalam timeframe tertentu</p>
+
+                                <h6 class="card-title text-primary">📊 Total</h6>
+                                <p class="card-text small">Total frekuensi trading (Buy + Sell)</p>
+
+                                <h6 class="card-title text-primary">📈 Avg Activity Buy/Sell</h6>
+                                <p class="card-text small">Rata-rata frekuensi trading per periode waktu</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4 class="text-info mb-3">📊 <strong>Volume Tab</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-info">📊 Buy/Sell 1m, 5m, 10m, 60m, 120m</h6>
+                                <p class="card-text small">Volume pembelian/penjualan dalam satuan coin</p>
+
+                                <h6 class="card-title text-info">📊 Total</h6>
+                                <p class="card-text small">Total volume trading (Buy + Sell)</p>
+
+                                <h6 class="card-title text-info">💵 Avg Vol Buy/Sell</h6>
+                                <p class="card-text small">Rata-rata volume trading per periode waktu</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <h4 class="text-info mb-3">🎯 <strong>Recommendation Algorithm</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h6 class="text-success">🟢 BUY (≥60% confidence)</h6>
+                                        <ul class="small">
+                                            <li>Harga dekat level Low (Price Pos ≤33%)</li>
+                                            <li>Momentum harga turun signifikan (<-5%)</li>
+                                            <li>Volume Durability tinggi (≥67%)</li>
+                                            <li>Frequency Durability tinggi (≥67%)</li>
+                                            <li><strong>Volume Buy 2x > Volume Sell (ratio >2.0)</strong></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-danger">🔴 SELL (≥60% confidence)</h6>
+                                        <ul class="small">
+                                            <li>Harga dekat level High (Price Pos ≥67%)</li>
+                                            <li>Momentum harga naik signifikan (>5%)</li>
+                                            <li>Volume Durability rendah (≤33%)</li>
+                                            <li>Frequency Durability rendah (≤33%)</li>
+                                            <li><strong>Volume Sell 2x > Volume Buy (ratio <0.5)</strong></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-warning">🟡 HOLD (<60% confidence)</h6>
+                                        <ul class="small">
+                                            <li>Kondisi pasar netral/mixed</li>
+                                            <li>Tidak ada sinyal kuat BUY atau SELL</li>
+                                            <li>Perlu monitoring lebih lanjut</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h4 class="text-info mb-3">⚖️ <strong>Faktor Rekomendasi & Bobot</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-primary">📍 Posisi Harga (25%)</h6>
+                                        <p class="small mb-2">Posisi harga saat ini dalam range High-Low</p>
+
+                                        <h6 class="text-primary">📈 Momentum Harga (15%)</h6>
+                                        <p class="small mb-2">Perubahan persentase harga terkini</p>
+
+                                        <h6 class="text-primary">💹 Durabilitas Volume 2h (12%)</h6>
+                                        <p class="small mb-2">Konsistensi volume beli dalam 2 jam</p>
+
+                                        <h6 class="text-primary">🔄 Durabilitas Frekuensi 2h (12%)</h6>
+                                        <p class="small mb-2">Konsistensi frekuensi transaksi beli</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-success">📊 Rasio Volume Buy/Sell (25%)</h6>
+                                        <p class="small mb-2"><strong>FAKTOR PENTING:</strong> Perbandingan volume beli vs jual</p>
+
+                                        <h6 class="text-primary">📅 Durabilitas 24h (8%)</h6>
+                                        <p class="small mb-2">Konsistensi volume dalam 24 jam</p>
+
+                                        <h6 class="text-primary">⚡ Momentum vs Rata-rata (3%)</h6>
+                                        <p class="small mb-2">Volume terkini vs rata-rata historis</p>
+
+                                        <div class="alert alert-info small mt-3">
+                                            <strong>💡 Update:</strong> Bobot Volume Ratio dinaikkan dari 10% ke 25% karena lebih mencerminkan tekanan beli/jual sesungguhnya
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h4 class="text-info mb-3">📊 <strong>Data Lainnya</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-secondary">💵 Total Vol</h6>
+                                <p class="card-text small">Total volume dalam fiat currency</p>
+
+                                <h6 class="card-title text-secondary">⏰ Update</h6>
+                                <p class="card-text small">Waktu terakhir data diupdate</p>
+
+                                <h6 class="card-title text-secondary">📈 Activity Buy/Sell (2h, vol proxy)</h6>
+                                <p class="card-text small">Aktivitas buy/sell dalam 2 jam terakhir (volume digunakan sebagai proxy untuk frekuensi)</p>
+
+                                <h6 class="card-title text-secondary">📊 Vol Buy/Sell (2h)</h6>
+                                <p class="card-text small">Volume buy/sell dalam 2 jam terakhir</p>
+
+                                <h6 id="volRatioSection" class="card-title text-success">📊 Vol Ratio %</h6>
+                                <div class="card-text small">
+                                    <strong>Rasio Volume Buy vs Sell dalam skala 100%</strong><br>
+                                    <strong>Formula:</strong> (Volume Buy ÷ Volume Sell) × 100%<br><br>
+
+                                    <strong>📈 Interpretasi:</strong><br>
+                                    • <strong>500%+</strong>: Ekstrem bullish - Buy volume 5x lebih besar<br>
+                                    • <strong>200-500%</strong>: Sangat bullish - Buy volume 2-5x lebih besar<br>
+                                    • <strong>150-200%</strong>: Bullish moderat - Buy volume 1.5-2x lebih besar<br>
+                                    • <strong>80-150%</strong>: Sedikit bullish - Buy volume lebih dominan<br>
+                                    • <strong>50-80%</strong>: Netral - Rasio seimbang<br>
+                                    • <strong>20-50%</strong>: Bearish moderat - Sell volume lebih dominan<br>
+                                    • <strong>0-20%</strong>: Sangat bearish - Sell volume mendominasi<br><br>
+
+                                    <strong>🎯 Trading Signals:</strong><br>
+                                    • <strong>🟢 >200%</strong>: Strong BUY signal - Institutional buying<br>
+                                    • <strong>🟡 50-200%</strong>: HOLD - Market balance<br>
+                                    • <strong>🔴 <50%</strong>: Strong SELL signal - Distribution phase<br><br>
+
+                                    <strong>⚠️ Special Cases:</strong><br>
+                                    • <strong>999%</strong>: Only BUY volume (no SELL)<br>
+                                    • <strong>0%</strong>: Only SELL volume (no BUY)<br>
+                                    • <strong>100%</strong>: Perfect balance<br><br>
+
+                                    <strong>📊 Data Source:</strong> count_VOL_minute_120_buy vs count_VOL_minute_120_sell
+                                </div>
+
+                                <h6 class="card-title text-info mt-3">📊 Vol Buy/Sell (24h)</h6>
+                                <p class="card-text small"><strong>Volume buy/sell dalam 24 jam terakhir</strong><br>
+                                Berguna untuk melihat tren jangka panjang dan perbandingan dengan volume 2 jam<br>
+                                <strong>Data Source:</strong> count_VOL_minute_1440_buy vs count_VOL_minute_1440_sell</p>
+
+                                <h6 class="card-title text-warning mt-3">🎯 Dampak pada Rekomendasi</h6>
+                                <div class="card-text small">
+                                    <strong>Volume Ratio mempengaruhi algoritma rekomendasi dengan bobot 25%:</strong><br>
+                                    <strong>Menggunakan data 2 jam terakhir untuk sinyal real-time</strong><br><br>
+
+                                    <strong>📈 BUY Signals Enhanced:</strong><br>
+                                    • Ratio >200% (+25 poin BUY)<br>
+                                    • Ratio >150% (+15 poin BUY)<br><br>
+
+                                    <strong>📉 SELL Signals Enhanced:</strong><br>
+                                    • Ratio <50% (+25 poin SELL)<br>
+                                    • Ratio <67% (+15 poin SELL)<br><br>
+
+                                    <strong>💡 Mengapa 2 Jam?</strong><br>
+                                    Volume 2 jam memberikan sinyal yang lebih timely dan relevant untuk trading HFT<br>
+                                    Volume 24 jam lebih cocok untuk analisis tren jangka panjang<br><br>
+
+                                    <strong>⚡ Real-time Advantage:</strong><br>
+                                    Volume ratio memberikan sinyal lebih awal daripada perubahan harga karena mencerminkan intent pasar sebelum harga bergerak signifikan.
+                                </div>
+
+                                <h6 class="card-title text-info mt-3">📚 Cara Menggunakan Vol Ratio %</h6>
+                                <div class="card-text small">
+                                    <strong>🔥 Scalping Strategy:</strong><br>
+                                    • Cari ratio >300% untuk entry BUY<br>
+                                    • Exit ketika ratio turun ke <150%<br>
+                                    • Stop loss jika ratio <50%<br><br>
+
+                                    <strong>📊 Swing Trading:</strong><br>
+                                    • Monitor perubahan ratio harian<br>
+                                    • Konfirmasi dengan durability metrics<br>
+                                    • Gunakan sebagai filter untuk entry/exit<br><br>
+
+                                    <strong>⚠️ Risk Management:</strong><br>
+                                    • Jangan trading melawan ratio ekstrem<br>
+                                    • Ratio >500% bisa berarti overbought<br>
+                                    • Ratio <20% bisa berarti oversold<br><br>
+
+                                    <strong>🔄 Market Context:</strong><br>
+                                    • Bandingkan dengan rata-rata historis<br>
+                                    • Perhatikan volume total bersamaan<br>
+                                    • Kombinasikan dengan price action<br><br>
+
+                                    <strong>💡 Pro Tips:</strong><br>
+                                    • Ratio mendadak >400% = Institutional buying<br>
+                                    • Ratio konsisten >200% = Strong uptrend<br>
+                                    • Ratio turun ke <100% = Warning signal<br>
+                                    • Ratio <30% = Potential reversal zone
+                                </div>
+
+                                <h6 class="card-title text-primary mt-3">🔗 Hubungan dengan Indikator Lain</h6>
+                                <div class="card-text small">
+                                    <strong>📈 Dengan Price Position:</strong><br>
+                                    • Ratio >200% + Price Pos >67% = Overbought<br>
+                                    • Ratio <50% + Price Pos <33% = Oversold<br>
+                                    • Ratio >150% + Price Pos <50% = Accumulation<br><br>
+
+                                    <strong>💹 Dengan Durability:</strong><br>
+                                    • Ratio >200% + Durability >67% = Strong conviction<br>
+                                    • Ratio >150% + Durability <33% = Weak momentum<br>
+                                    • Ratio <50% + Durability >67% = Distribution<br><br>
+
+                                    <strong>📊 Dengan Volume Total:</strong><br>
+                                    • High ratio + High volume = Institutional interest<br>
+                                    • High ratio + Low volume = Retail buying<br>
+                                    • Low ratio + High volume = Institutional selling<br><br>
+
+                                    <strong>⚡ Dengan Momentum:</strong><br>
+                                    • Ratio >200% + Positive change = Bullish confirmation<br>
+                                    • Ratio <50% + Negative change = Bearish confirmation<br>
+                                    • Ratio neutral + High momentum = Short-term move<br><br>
+
+                                    <strong>🎯 Best Combinations:</strong><br>
+                                    • Ratio >200% + Durability >67% + Price Pos <50% = STRONG BUY<br>
+                                    • Ratio <50% + Durability >67% + Price Pos >50% = STRONG SELL
+                                </div>
+
+                                <h6 class="card-title text-danger mt-3">📖 Studi Kasus Volume Ratio</h6>
+                                <div class="card-text small">
+                                    <strong>📈 Kasus 1 - Pump Detection:</strong><br>
+                                    Ratio tiba-tiba naik dari 80% ke 450% dalam 5 menit<br>
+                                    Durability turun dari 75% ke 25%<br>
+                                    <strong>Signal:</strong> Artificial pump - jangan ikut<br><br>
+
+                                    <strong>📉 Kasus 2 - Institutional Accumulation:</strong><br>
+                                    Ratio konsisten 180-220% selama 2 jam<br>
+                                    Durability stabil di 70-80%<br>
+                                    Volume total meningkat<br>
+                                    <strong>Signal:</strong> Smart money buying - ikuti trend<br><br>
+
+                                    <strong>⚡ Kasus 3 - Reversal Signal:</strong><br>
+                                    Ratio turun dari 250% ke 45% dalam 15 menit<br>
+                                    Price position masih di 70%<br>
+                                    <strong>Signal:</strong> Momentum shift - exit long positions<br><br>
+
+                                    <strong>🔄 Kasus 4 - Sideways Market:</strong><br>
+                                    Ratio berfluktuasi 90-110% selama berjam-jam<br>
+                                    Durability rendah di semua timeframe<br>
+                                    <strong>Signal:</strong> Consolidation - tunggu breakout<br><br>
+
+                                    <strong>💥 Kasus 5 - Panic Selling:</strong><br>
+                                    Ratio turun drastis ke 15% dalam waktu singkat<br>
+                                    Durability melonjak ke 85%<br>
+                                    <strong>Signal:</strong> Oversold condition - potential bounce<br><br>
+
+                                    <strong>🎯 Lesson Learned:</strong><br>
+                                    Volume ratio bukan indikator standalone. Selalu konfirmasi dengan durability, price position, dan volume total untuk sinyal yang lebih akurat.
+                                </div>
+
+                                <h6 class="card-title text-secondary mt-3">⚠️ Troubleshooting & Common Mistakes</h6>
+                                <div class="card-text small">
+                                    <strong>🚫 Jangan Salah Interpretasi:</strong><br>
+                                    • Ratio 300% bukan berarti harga akan naik 3x<br>
+                                    • Ratio ekstrem bisa berarti thin liquidity<br>
+                                    • Ratio 100% bukan berarti market netral<br><br>
+
+                                    <strong>🔍 False Signals:</strong><br>
+                                    • Market maker manipulation<br>
+                                    • Low volume periods<br>
+                                    • News-driven spikes<br>
+                                    • Coin listing effects<br><br>
+
+                                    <strong>📊 Validation Steps:</strong><br>
+                                    1. Check volume total (minimal threshold)<br>
+                                    2. Verify durability consistency<br>
+                                    3. Confirm price position alignment<br>
+                                    4. Look for multi-timeframe confirmation<br>
+                                    5. Consider market context<br><br>
+
+                                    <strong>⏰ Time-based Considerations:</strong><br>
+                                    • Asian session: Lower volume, higher volatility<br>
+                                    • US session: Higher volume, more reliable signals<br>
+                                    • Weekend: Thin liquidity, unreliable ratios<br>
+                                    • Major news: Extreme ratios, high risk<br><br>
+
+                                    <strong>🎪 Market Manipulation Signs:</strong><br>
+                                    • Ratio changes >500% in <5 minutes<br>
+                                    • Durability drops while ratio spikes<br>
+                                    • Volume total doesn't support the ratio<br>
+                                    • Opposite signals across timeframes
+                                </div>
+
+                                <h6 class="card-title text-light mt-3">📈 Monitoring & Development Over Time</h6>
+                                <div class="card-text small">
+                                    <strong>📊 Historical Baseline:</strong><br>
+                                    • Track ratio selama 24-48 jam untuk baseline<br>
+                                    • Identifikasi level support/resistance ratio<br>
+                                    • Catat pola ratio pada timeframe berbeda<br><br>
+
+                                    <strong>🔄 Ratio Evolution:</strong><br>
+                                    • Monitor perubahan ratio per 5-15 menit<br>
+                                    • Cari pola: rising/falling/consolidating<br>
+                                    • Bandingkan dengan volume total trend<br><br>
+
+                                    <strong>🎯 Alert Setup:</strong><br>
+                                    • Alert ketika ratio >300% (strong buy)<br>
+                                    • Alert ketika ratio <30% (strong sell)<br>
+                                    • Alert ketika ratio crosses 100%<br><br>
+
+                                    <strong>📱 Mobile Monitoring:</strong><br>
+                                    • Focus pada ratio ekstrem (>250% atau <40%)<br>
+                                    • Monitor 2-3 coin favorit saja<br>
+                                    • Set notifikasi untuk sinyal penting<br><br>
+
+                                    <strong>🧠 Learning Process:</strong><br>
+                                    • Backtest ratio signals pada historical data<br>
+                                    • Catat hasil trading berdasarkan ratio<br>
+                                    • Adjust threshold berdasarkan pengalaman<br>
+                                    • Combine dengan indikator favorit Anda<br><br>
+
+                                    <strong>🚀 Advanced Usage:</strong><br>
+                                    • Create ratio-based trading bots<br>
+                                    • Develop ratio divergence strategies<br>
+                                    • Use ratio for risk management<br>
+                                    • Integrate dengan portfolio management
+                                </div>
+
+                                <div class="alert alert-success small mt-3">
+                                    <strong>💡 Kesimpulan Volume Ratio %:</strong><br>
+                                    Volume Ratio % adalah indikator fundamental yang menunjukkan arah aliran uang sesungguhnya di pasar crypto. Dengan bobot 25% dalam algoritma rekomendasi, metric ini menjadi salah satu faktor terpenting untuk mengidentifikasi tren pasar yang sebenarnya. Gunakan dengan bijak, selalu konfirmasi dengan indikator lain, dan ingat bahwa tidak ada indikator yang 100% akurat - risk management tetap yang utama!
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4 class="text-info mb-3">🎨 <strong>Color Coding</strong></h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title text-success">🟢 Green (Excellent)</h6>
+                                <p class="card-text small">67-100% - Kondisi sangat baik</p>
+
+                                <h6 class="card-title text-warning">🟡 Yellow (Good)</h6>
+                                <p class="card-text small">34-66% - Kondisi cukup baik</p>
+
+                                <h6 class="card-title text-danger">🔴 Red (Poor)</h6>
+                                <p class="card-text small">0-33% - Kondisi kurang baik</p>
+
+                                <h6 class="card-title text-success">🟢 BUY Recommendation</h6>
+                                <p class="card-text small">Sinyal beli dengan confidence ≥60%</p>
+
+                                <h6 class="card-title text-danger">🔴 SELL Recommendation</h6>
+                                <p class="card-text small">Sinyal jual dengan confidence ≥60%</p>
+
+                                <h6 class="card-title text-warning">🟡 HOLD Recommendation</h6>
+                                <p class="card-text small">Tunggu dengan confidence <60%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-info bg-dark text-light border-info">
+                            <h5>💡 <strong>Tips Penggunaan:</strong></h5>
+                            <ul class="mb-0">
+                                <li><strong>Sorting:</strong> Klik header kolom untuk mengurutkan data</li>
+                                <li><strong>Filtering:</strong> Gunakan search box untuk mencari coin tertentu</li>
+                                <li><strong>Row Limit:</strong> Atur jumlah baris yang ditampilkan (default: 20)</li>
+                                <li><strong>Real-time:</strong> Data diperbarui secara otomatis via WebSocket</li>
+                                <li><strong>Recommendation:</strong> Gunakan sebagai panduan, bukan keputusan final</li>
+                                <li><strong>Risk Management:</strong> Selalu gunakan stop-loss dan position sizing</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- Quick access: Open Recs tab directly under Tips Penggunaan -->
+                <div class="row mt-2">
+                    <div class="col-md-12 text-center">
+                        <button id="openRecsBtn" class="btn btn-sm btn-outline-primary">Open Recs (Recommendations)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="alerts" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4 class="text-info">🔔 Alerts</h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableAlertsToggle" checked>
+                                    <label class="form-check-label" for="enableAlertsToggle">🔔 Enable Alerts</label>
+                                </div>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableSoundToggle">
+                                    <label class="form-check-label" for="enableSoundToggle">🔊 Sound Alerts</label>
+                                </div>
+                                <div class="input-group input-group-sm mt-2">
+                                    <input type="text" id="alertWebhookUrl" class="form-control" placeholder="Webhook URL (optional)">
+                                    <button class="btn btn-outline-secondary" id="alertWebhookTest">Test</button>
+                                </div>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="persistHistoryToggleAlt">
+                                    <label class="form-check-label" for="persistHistoryToggleAlt">💾 Persist History (LocalStorage) — control</label>
+                                </div>
+                                <div class="form-text small text-muted mt-2">Alerts appear as a banner and can send webhooks when configured.</div>
+                                <div id="alertsListContainer" class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="small text-muted mb-0">Recent Alerts</h6>
+                                        <div>
+                                            <button id="clearAlertsBtn" class="btn btn-sm btn-outline-danger">Clear</button>
+                                        </div>
+                                    </div>
+                                    <div id="alertsList" class="list-group list-group-flush" style="max-height:240px;overflow:auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success">Alert Rules & Notes</h6>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body small">
+                                <p>• Alert when Vol Ratio % (2h) &gt; 300% (strong buy)</p>
+                                <p>• Alert when Vol Ratio % (2h) &lt; 30% (strong sell)</p>
+                                <p>• Alert when Vol Ratio crosses 100%</p>
+                                <p class="mt-2 text-muted">Use webhook test to verify delivery. Enable sound for audible alerts.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tab-pane fade" id="spikes" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="spikeTable">
+                        <thead>
+                            <tr>
+                                <th>🪙 Coin</th>
+                                <th>⏱ Timeframe</th>
+                                <th>📊 Vol</th>
+                                <th>➗ Avg</th>
+                                <th>⚡ Ratio</th>
+                                <th>⏰ Update</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spikeBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="recommendations" role="tabpanel">
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="useAtrRecs">
+                            <label class="form-check-label small text-muted" for="useAtrRecs">Use ATR-based TP/SL</label>
+                        </div>
+                        <div class="input-group input-group-sm" style="width:260px;">
+                            <span class="input-group-text">TP% min / max</span>
+                            <input type="number" id="tpMin" class="form-control" placeholder="min" value="2" step="0.1">
+                            <input type="number" id="tpMax" class="form-control" placeholder="max" value="10" step="0.1">
+                        </div>
+                        <div class="input-group input-group-sm" style="width:160px;">
+                            <span class="input-group-text">SL% max</span>
+                            <input type="number" id="slMax" class="form-control" placeholder="max" value="5" step="0.1">
+                        </div>
+                        <div class="input-group input-group-sm" style="width:200px;">
+                            <span class="input-group-text">Sens</span>
+                            <input type="range" id="confSensitivity" min="0" max="2" step="0.05" value="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="recsTable">
+                        <thead>
+                            <tr>
+                                <th>🪙 Coin</th>
+                                <th>⏱ Timeframe</th>
+                                <th>🎯 Recommendation</th>
+                                <th>🔎 Confidence</th>
+                                <th>💰 Price</th>
+                                <th>🎯 TP</th>
+                                <th>⛔ SL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        function CheckInfinity(value, avg) {
+            const persentase = avg !== 0
+                ? Math.round((value / avg) * 100)
+                : 0; // Atur ke 0 jika rata-rata adalah 0
+            return persentase;
+        }
+
+
+        const limitInput = document.getElementById('limitInput');
+        const sortBySelect = document.getElementById('sortBy');
+        // radio buttons for sort order
+        const sortOrderRadios = document.getElementsByName('sortOrderRad');
+        function getSortOrderValue() {
+            try { for (const r of sortOrderRadios) if (r.checked) return r.value; } catch(e){}
+            return 'desc';
+        }
+        let rowLimit = 5; // default rows to display (changed from 20)
+
+        // Per-tab filter inputs
+        const filterInputs = {
+            summary: document.getElementById('coinFilter_summary'),
+            volume: document.getElementById('coinFilter_volume'),
+            volDur: document.getElementById('coinFilter_volDur'),
+            spikes: document.getElementById('coinFilter_spikes'),
+            recs: document.getElementById('coinFilter_recs'),
+            alerts: document.getElementById('coinFilter_alerts')
+        };
+        let activeFilterTab = 'summary';
+
+        function setActiveFilterTab(tab) {
+            activeFilterTab = tab || 'summary';
+            for (const k in filterInputs) {
+                try {
+                    const el = filterInputs[k];
+                    if (!el) continue;
+                    if (k === activeFilterTab) el.classList.remove('d-none'); else el.classList.add('d-none');
+                } catch(e){}
+            }
+        }
+
+        function getActiveFilterValue() {
+            try {
+                const el = filterInputs[activeFilterTab];
+                if (!el) return '';
+                return (el.value || '').toLowerCase();
+            } catch(e) { return ''; }
+        }
+
+        // Recommendation UI controls
+        const useAtrRecs = document.getElementById('useAtrRecs');
+        const tpMinInput = document.getElementById('tpMin');
+        const tpMaxInput = document.getElementById('tpMax');
+        const slMaxInput = document.getElementById('slMax');
+        const confSensitivity = document.getElementById('confSensitivity');
+
+        // Alerts compacting + hidden buffer
+        const compactAlertsToggle = document.getElementById('compactAlertsToggle');
+        const maxAlertBannersInput = document.getElementById('maxAlertBanners');
+        const showHiddenAlertsBtn = document.getElementById('showHiddenAlertsBtn');
+        // buffer for alerts suppressed while compact mode is on
+        const hiddenAlertBuffer = window._hiddenAlertBuffer || (window._hiddenAlertBuffer = []);
+
+        // load persisted compact preferences
+        try {
+            const savedCompact = localStorage.getItem('okx_compact_alerts');
+            if (savedCompact !== null && compactAlertsToggle) compactAlertsToggle.checked = (savedCompact === 'true');
+            const savedMax = localStorage.getItem('okx_max_alert_banners');
+            if (savedMax !== null && maxAlertBannersInput) maxAlertBannersInput.value = Number(savedMax) || 3;
+        } catch(e) { /* ignore */ }
+
+        // Listen for changes to the limit
+        limitInput.addEventListener('input', (event) => {
+            rowLimit = parseInt(event.target.value, 10) || Infinity;
+            updateTable(); // Update table when limit changes
+        });
+
+        // Wire recommendation controls to refresh table when changed
+        try {
+            if (useAtrRecs) useAtrRecs.addEventListener('change', () => updateTable());
+            if (tpMinInput) tpMinInput.addEventListener('input', () => updateTable());
+            if (tpMaxInput) tpMaxInput.addEventListener('input', () => updateTable());
+            if (slMaxInput) slMaxInput.addEventListener('input', () => updateTable());
+            if (confSensitivity) confSensitivity.addEventListener('input', () => updateTable());
+        } catch(e) { console.warn('wiring rec controls failed', e); }
+
+        // Listen for changes in each per-tab filter input
+        try {
+            for (const k in filterInputs) {
+                const el = filterInputs[k];
+                if (!el) continue;
+                el.addEventListener('input', () => updateTable());
+            }
+        } catch(e) { console.warn('wiring per-tab filters failed', e); }
+
+        // Tab click handlers to switch active filter
+        try {
+            const tabMap = {
+                'summary-tab': 'summary',
+                'volume-tab': 'volume',
+                'vol-dur-tab': 'volDur',
+                'spike-tab': 'spikes',
+                'recs-tab': 'recs',
+                'alerts-tab': 'alerts',
+                'insight-tab': 'summary',
+                'info-tab': 'summary'
+            };
+            for (const tid in tabMap) {
+                const btn = document.getElementById(tid);
+                if (!btn) continue;
+                btn.addEventListener('click', () => setActiveFilterTab(tabMap[tid]));
+            }
+        } catch(e) { console.warn('wiring tab filter toggles failed', e); }
+
+        // show default filter
+        setActiveFilterTab('summary');
+
+        // Wire compact alert controls
+        try {
+            if (compactAlertsToggle) compactAlertsToggle.addEventListener('change', (ev) => {
+                try { localStorage.setItem('okx_compact_alerts', ev.target.checked ? 'true' : 'false'); } catch(e){}
+            });
+            if (maxAlertBannersInput) maxAlertBannersInput.addEventListener('input', (ev) => {
+                try { localStorage.setItem('okx_max_alert_banners', String(parseInt(ev.target.value,10) || 0)); } catch(e){}
+            });
+            if (showHiddenAlertsBtn) showHiddenAlertsBtn.addEventListener('click', (ev) => {
+                try {
+                    // populate modal with hidden alerts
+                    const modalBody = document.getElementById('hiddenAlertsModalBody');
+                    if (!modalBody) return;
+                    modalBody.innerHTML = '';
+                    if (!hiddenAlertBuffer || hiddenAlertBuffer.length === 0) {
+                        modalBody.innerHTML = '<div class="small text-muted">No hidden alerts</div>';
+                    } else {
+                        for (const a of hiddenAlertBuffer) {
+                            const div = document.createElement('div');
+                            div.className = 'mb-2 p-2 bg-dark text-light';
+                            div.innerHTML = `<strong>${a.title}</strong><div style="font-size:0.9em;">${a.message}</div><div class="text-muted small">${new Date(a.ts).toLocaleString()}</div>`;
+                            modalBody.appendChild(div);
+                        }
+                    }
+                    const bs = new bootstrap.Modal(document.getElementById('hiddenAlertsModal'));
+                    bs.show();
+                } catch(e) { console.warn('showHiddenAlerts failed', e); }
+            });
+        } catch(e) { console.warn('wiring compact alert controls failed', e); }
+
+        // Listen for changes in sort criteria
+        sortBySelect.addEventListener('change', () => {
+            updateTable(); // Update table when sort criteria is changed
+        });
+
+        // Listen for changes in sort order (radio buttons)
+        try {
+            for (const r of sortOrderRadios) { if (r) r.addEventListener('change', () => updateTable()); }
+        } catch(e) { console.warn('wiring sort order radios failed', e); }
+
+        const summaryBody = document.getElementById('summaryBody');
+        const volBody = document.getElementById('volBody');
+        const spikeBody = document.getElementById('spikeBody');
+        const recsBody = document.getElementById('recsBody');
+        const openRecsBtn = document.getElementById('openRecsBtn');
+
+        if (openRecsBtn) {
+            openRecsBtn.addEventListener('click', () => {
+                try { const tab = document.getElementById('recs-tab'); if (tab) tab.click(); } catch(e) { console.warn('openRecs click failed', e); }
+            });
+        }
+                const ws = new WebSocket('ws://localhost:8089');
+
+                // --- Insight modal helpers (ensure global functions available) ---
+                function ensureInsightModal() {
+                        if (document.getElementById('insightModal')) return;
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = `
+                        <div class="modal fade" id="insightModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="insightModalLabel">Insight</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body" id="insightModalBody">
+                                        <!-- populated dynamically -->
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-outline-primary" id="insightExportJson">Export JSON</button>
+                                        <button type="button" class="btn btn-outline-success" id="insightExportCsv">Export CSV</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                        document.body.appendChild(wrapper.firstElementChild);
+                }
+
+                function drawSparkline(history, width = 600, height = 80) {
+                        if (!history || history.length === 0) return '';
+                        const vals = history.map(h => Number(h.price || h.volBuy2h || h.volSell2h || 0));
+                        const min = Math.min(...vals);
+                        const max = Math.max(...vals);
+                        const range = (max - min) || 1;
+                        const step = width / Math.max(1, vals.length - 1);
+                        const points = vals.map((v, i) => {
+                                const x = Math.round(i * step);
+                                const y = Math.round(height - ((v - min) / range) * height);
+                                return `${x},${y}`;
+                        }).join(' ');
+                        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg"><polyline fill="none" stroke="#0d6efd" stroke-width="2" points="${points}"/></svg>`;
+                }
+
+                // --- Alerts: banner, sound, webhook ---
+                const alertState = {
+                    enabled: true,
+                    sound: false,
+                    webhook: ''
+                };
+                const lastAlertAt = {}; // per-coin throttle
+                // Whether to persist per-coin history to localStorage (default: enabled)
+                let persistHistoryEnabled = (localStorage.getItem('okx_calc_persist') !== 'false');
+
+                // create banner container
+                (function(){
+                    const b = document.createElement('div');
+                    b.id = 'alertBanner';
+                    b.style.position = 'fixed';
+                    b.style.left = '12px';
+                    b.style.top = '12px';
+                    b.style.zIndex = 3000;
+                    b.style.maxWidth = 'min(600px, 90vw)';
+                    document.body.appendChild(b);
+                })();
+
+                // simple sound element
+                const _alertAudio = document.createElement('audio');
+                _alertAudio.src = 'data:audio/ogg;base64,T2dnUwACAAAAAAAAAABVDwAAAAAA...'; // tiny placeholder (silent) - replace if needed
+                _alertAudio.preload = 'auto';
+                document.body.appendChild(_alertAudio);
+
+                function showAlertBanner(title, message, type = 'info', timeout = 1500) {
+                    if (!alertState.enabled) return;
+                    const container = document.getElementById('alertBanner');
+                    if (!container) return;
+                    // Respect compact alerts setting: if compact enabled and visible banners >= max, skip showing banner
+                    try {
+                        const compactEl = document.getElementById('compactAlertsToggle');
+                        const maxEl = document.getElementById('maxAlertBanners');
+                        const compactEnabled = compactEl ? !!compactEl.checked : false;
+                        const maxVisible = maxEl ? (parseInt(maxEl.value, 10) || 0) : 3;
+                        if (compactEnabled && (maxVisible <= 0 || container.children.length >= maxVisible)) {
+                                // store suppressed alert in buffer, still record in Alerts tab and optionally play sound/webhook
+                                try { hiddenAlertBuffer.push({ title, message, type, ts: Date.now() }); } catch(e){}
+                                try { if (alertState.sound) { _alertAudio.currentTime = 0; _alertAudio.play().catch(()=>{}); } } catch(e){}
+                                try { let coin = null; if (typeof title === 'string' && title.indexOf('—') !== -1) coin = title.split('—')[0].trim(); addAlertToTab(coin, message, type, Date.now()); } catch(e){}
+                                return;
+                        }
+                    } catch(e) { /* ignore compact check errors and continue to show banner */ }
+                    const el = document.createElement('div');
+                    el.className = 'alert';
+                    el.style.marginBottom = '8px';
+                    el.style.cursor = 'pointer';
+                    el.style.opacity = '0.98';
+                    el.style.backdropFilter = 'blur(6px)';
+                    if (type === 'danger') el.classList.add('alert-danger');
+                    else if (type === 'warning') el.classList.add('alert-warning');
+                    else el.classList.add('alert-info');
+                    // include explicit close button to ensure users can dismiss banners
+                    el.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                            <div style="flex:1;">
+                                <strong>${title}</strong>
+                                <div style="font-size:0.9em;margin-top:4px;">${message}</div>
+                            </div>
+                            <button type="button" aria-label="Close" title="Close" class="btn-close btn-close-white" style="margin-left:12px;" />
+                        </div>
+                    `;
+                    try {
+                        const closeBtn = el.querySelector('.btn-close');
+                        if (closeBtn) closeBtn.addEventListener('click', (ev) => { try { ev.stopPropagation(); el.remove(); } catch(e){} });
+                    } catch(e){}
+                    // also allow clicking the banner body to remove it (defensive)
+                    el.addEventListener('click', (ev) => { try { if (ev && ev.target && ev.target.classList && ev.target.classList.contains('btn-close')) return; el.remove(); } catch(e){} });
+                    container.appendChild(el);
+                    if (alertState.sound) try { _alertAudio.currentTime = 0; _alertAudio.play().catch(()=>{}); } catch(e){}
+                    setTimeout(()=>{ try { if (el && el.parentElement) el.remove(); } catch(e){} }, timeout);
+                    // Also append this alert into the Alerts tab list for persistence/visibility
+                    try {
+                        // derive coin if present in title (format: 'COIN — Alert')
+                        let coin = null;
+                        if (typeof title === 'string' && title.indexOf('—') !== -1) coin = title.split('—')[0].trim();
+                        addAlertToTab(coin, message, type, Date.now());
+                    } catch (e) { console.warn('addAlertToTab failed', e); }
+                }
+
+                async function sendAlertWebhook(coin, insights) {
+                    try {
+                        const url = (document.getElementById('alertWebhookUrl') && document.getElementById('alertWebhookUrl').value) || alertState.webhook || '';
+                        if (!url) return;
+                        await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ coin, insights, ts: Date.now() }) });
+                    } catch (e) { console.warn('Webhook send failed', e); }
+                }
+
+                // wire UI controls (if present)
+                try {
+                    const eToggle = document.getElementById('enableAlertsToggle');
+                    const sToggle = document.getElementById('enableSoundToggle');
+                    const wInput = document.getElementById('alertWebhookUrl');
+                    const wTest = document.getElementById('alertWebhookTest');
+                    if (eToggle) { alertState.enabled = !!eToggle.checked; eToggle.addEventListener('change', (ev)=> alertState.enabled = !!ev.target.checked); }
+                    if (sToggle) { alertState.sound = !!sToggle.checked; sToggle.addEventListener('change', (ev)=> alertState.sound = !!ev.target.checked); }
+                    if (wInput) { wInput.addEventListener('input', (ev)=> alertState.webhook = ev.target.value); if (localStorage.getItem('okx_calc_webhook')) { wInput.value = localStorage.getItem('okx_calc_webhook'); alertState.webhook = wInput.value; } }
+                    if (wTest) wTest.addEventListener('click', ()=> { showAlertBanner('Webhook test', 'Sending test payload...', 'info', 3000); sendAlertWebhook('TEST', { test: true }); try { localStorage.setItem('okx_calc_webhook', (wInput && wInput.value) || ''); } catch(e){} });
+                    // Defensive: ensure toggles and labels accept pointer events (fixes cases where overlays/CSS block clicks)
+                    try {
+                        if (eToggle) {
+                            try { eToggle.style.pointerEvents = 'auto'; if (eToggle.parentElement) eToggle.parentElement.style.pointerEvents = 'auto'; } catch(e){}
+                            const lbl = document.querySelector('label[for="enableAlertsToggle"]');
+                            if (lbl) {
+                                lbl.style.cursor = 'pointer';
+                                // ensure clicking the label toggles the checkbox in case implicit label->input isn't working
+                                lbl.addEventListener('click', (ev) => {
+                                    try { eToggle.checked = !eToggle.checked; eToggle.dispatchEvent(new Event('change')); } catch(e){}
+                                });
+                            }
+                        }
+                        if (sToggle) { try { sToggle.style.pointerEvents = 'auto'; if (sToggle.parentElement) sToggle.parentElement.style.pointerEvents = 'auto'; } catch(e){} }
+                    } catch(e) { console.warn('defensive toggle wiring failed', e); }
+                    // Alt persist toggle in alerts tab (mirror header control)
+                    try {
+                        const alt = document.getElementById('persistHistoryToggleAlt');
+                        const main = document.getElementById('persistHistoryToggle');
+                        if (alt) {
+                            // initialize state from saved preference
+                            alt.checked = persistHistoryEnabled;
+                            alt.addEventListener('change', (ev) => {
+                                persistHistoryEnabled = !!ev.target.checked;
+                                try { if (main) { main.checked = persistHistoryEnabled; } localStorage.setItem('okx_calc_persist', persistHistoryEnabled ? 'true' : 'false'); } catch(e){}
+                            });
+                        }
+                        if (main && alt) {
+                            // also sync main -> alt when main changes
+                            main.addEventListener('change', (ev) => {
+                                try { alt.checked = !!ev.target.checked; } catch(e){}
+                            });
+                        }
+                    } catch(e) { console.warn('alt persist wiring failed', e); }
+                } catch(e){ console.warn('alert UI wiring error', e); }
+
+                // Alerts storage and rendering in Alerts tab
+                const ALERTS_KEY = 'okx_calc_alerts_v1';
+
+                function loadAlertsFromStore() {
+                    try {
+                        const arr = JSON.parse(localStorage.getItem(ALERTS_KEY) || '[]');
+                        return Array.isArray(arr) ? arr : [];
+                    } catch (e) { return []; }
+                }
+
+                function saveAlertsToStore(arr) {
+                    try { localStorage.setItem(ALERTS_KEY, JSON.stringify(arr || [])); } catch (e) { }
+                }
+
+                function formatTs(ts) {
+                    try { const d = new Date(ts); return d.toLocaleString(); } catch (e) { return String(ts); }
+                }
+
+                function renderAlertsList() {
+                    try {
+                        const container = document.getElementById('alertsList');
+                        if (!container) return;
+                        const arr = loadAlertsFromStore();
+                        container.innerHTML = '';
+                        for (let i = arr.length - 1; i >= 0; i--) {
+                            const it = arr[i];
+                            const el = document.createElement('div');
+                            el.className = 'list-group-item bg-dark text-light small';
+                            el.style.border = '1px solid rgba(255,255,255,0.04)';
+                            el.innerHTML = `<div class="d-flex w-100 justify-content-between"><strong>${it.coin?it.coin+' — ':' '}${it.type && it.type==='warning'?'<span class="badge bg-warning text-dark">Alert</span>':''}${it.type && it.type==='danger'?'<span class="badge bg-danger">Alert</span>':''}</strong><small class="text-muted">${formatTs(it.ts)}</small></div><div style="font-size:0.9em;margin-top:4px;color:#cbd5e1;">${it.message}</div>`;
+                            container.appendChild(el);
+                        }
+                    } catch(e) { console.warn('renderAlertsList error', e); }
+                }
+
+                // Clear alerts & wire Clear button
+                function clearAlerts() {
+                    try {
+                        saveAlertsToStore([]);
+                        renderAlertsList();
+                        showAlertBanner('Alerts cleared', 'All stored alerts were removed', 'info', 3000);
+                    } catch (e) { console.warn('clearAlerts failed', e); }
+                }
+
+                try {
+                    const clearBtn = document.getElementById('clearAlertsBtn');
+                    if (clearBtn) clearBtn.addEventListener('click', () => {
+                        if (!confirm('Clear all stored alerts?')) return;
+                        clearAlerts();
+                    });
+                } catch(e) { console.warn('clearAlerts button wiring failed', e); }
+
+                function addAlertToTab(coin, message, type='info', ts=Date.now()) {
+                    try {
+                        const arr = loadAlertsFromStore();
+                        arr.push({ coin: coin || null, message: String(message || ''), type: type || 'info', ts: ts || Date.now() });
+                        // keep recent N alerts
+                        const MAX_ALERTS = 300;
+                        if (arr.length > MAX_ALERTS) arr.splice(0, arr.length - MAX_ALERTS);
+                        saveAlertsToStore(arr);
+                        renderAlertsList();
+                    } catch (e) { console.warn('addAlertToTab failed', e); }
+                }
+
+                // render stored alerts on load
+                try { renderAlertsList(); } catch(e) {}
+
+                // --- Persistence (LocalStorage) helpers ---
+                const PERSIST_KEY = 'okx_calc_history_v1';
+                const MAX_HISTORY = 500; // keep up to this many points per coin
+                // `persistHistoryEnabled` is declared earlier near other state variables to avoid TDZ
+                const _lastSaveAt = {};
+
+                function loadPersistedHistory(coin) {
+                    try {
+                        const store = JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}');
+                        const arr = store && store[coin] ? store[coin] : [];
+                        return Array.isArray(arr) ? arr.slice(-MAX_HISTORY) : [];
+                    } catch (e) { console.warn('loadPersistedHistory error', e); return []; }
+                }
+
+                function savePersistedHistory(coin, arr) {
+                    if (!persistHistoryEnabled) return;
+                    try {
+                        const now = Date.now();
+                        if (_lastSaveAt[coin] && (now - _lastSaveAt[coin]) < 5000) return; // throttle 5s
+                        _lastSaveAt[coin] = now;
+                        const store = JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}');
+                        store[coin] = arr.slice(-MAX_HISTORY);
+                        localStorage.setItem(PERSIST_KEY, JSON.stringify(store));
+                    } catch (e) { console.warn('savePersistedHistory error', e); }
+                }
+
+                // Wire the UI toggle
+                try {
+                    const t = document.getElementById('persistHistoryToggle');
+                    if (t) {
+                        // Ensure toggle reflects saved preference
+                        t.checked = persistHistoryEnabled;
+                        // Defensive: make sure the toggle and its parent accept pointer events
+                        try { t.style.pointerEvents = 'auto'; if (t.parentElement) t.parentElement.style.pointerEvents = 'auto'; } catch(e){}
+                        // Wire change handler
+                        t.addEventListener('change', (ev) => {
+                            persistHistoryEnabled = !!ev.target.checked;
+                            try { localStorage.setItem('okx_calc_persist', persistHistoryEnabled ? 'true' : 'false'); } catch(e){}
+                        });
+                        // Also make the label clickable (some layouts may overlay the checkbox)
+                        try {
+                            const lbl = document.querySelector('label[for="persistHistoryToggle"]');
+                            if (lbl) {
+                                lbl.style.cursor = 'pointer';
+                                lbl.addEventListener('click', (ev) => {
+                                    // toggle checkbox programmatically and fire change
+                                    try { t.checked = !t.checked; t.dispatchEvent(new Event('change')); } catch(e){}
+                                });
+                            }
+                        } catch(e) { console.warn('persist label wiring failed', e); }
+                    }
+                } catch (e) { console.warn('persist toggle wiring failed', e); }
+
+                // Global error display for debugging (shows last uncaught error on page)
+                window.__displayError = function(err) {
+                    try {
+                        console.error('Captured Error:', err);
+                        let el = document.getElementById('lastError');
+                        if (!el) {
+                            el = document.createElement('div');
+                            el.id = 'lastError';
+                            el.style.position = 'fixed';
+                            el.style.right = '12px';
+                            el.style.bottom = '12px';
+                            el.style.zIndex = 2000;
+                            el.style.background = 'rgba(220,53,69,0.95)';
+                            el.style.color = '#fff';
+                            el.style.padding = '8px 12px';
+                            el.style.borderRadius = '6px';
+                            el.style.fontSize = '12px';
+                            document.body.appendChild(el);
+                        }
+                        el.textContent = typeof err === 'string' ? err : (err && err.stack) ? err.stack.split('\n')[0] : String(err);
+                    } catch (e) { console.error('Error displaying error', e); }
+                };
+
+                window.addEventListener('error', function(ev) { window.__displayError(ev.error || ev.message || 'Unknown error'); });
+                window.addEventListener('unhandledrejection', function(ev) { window.__displayError(ev.reason || ev.reason && ev.reason.message || 'Unhandled rejection'); });
+
+                window.exportInsightJSON = function(coin, data) {
+                        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${coin}-insight.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                };
+
+                window.exportInsightCSV = function(coin, data) {
+                        // export history points and a few summary fields
+                        const rows = [];
+                        rows.push(['coin', coin]);
+                        rows.push(['risk_score', data.risk_score || (data._analytics && data._analytics.riskScore) || 0]);
+                        rows.push([]);
+                        rows.push(['ts','price','volBuy2h','volSell2h']);
+                        const hist = data._history || [];
+                        for (const h of hist) rows.push([h.ts || '', h.price || '', h.volBuy2h || '', h.volSell2h || '']);
+                        const csv = rows.map(r => r.map(c => String(c).replace(/"/g,'""')).map(c => `"${c}"`).join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${coin}-insight.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                };
+
+                window.showInsightModal = function(coin, data) {
+                        ensureInsightModal();
+                        const modalEl = document.getElementById('insightModal');
+                        const body = document.getElementById('insightModalBody');
+                        const title = document.getElementById('insightModalLabel');
+                        title.textContent = `Insights — ${coin}`;
+
+                        const risk = data.risk_score || (data._analytics && data._analytics.riskScore) || 0;
+                        const comp = (data._analytics && data._analytics.components) || {};
+                        const hist = data._history || [];
+
+                        body.innerHTML = `
+                                <div class="mb-3">
+                                    <strong>Risk Score:</strong> <span class="fw-bold">${risk}%</span>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">${drawSparkline(hist, 560, 90)}</div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Components</h6>
+                                        <ul>
+                                            <li>Imbalance: ${Number(comp.imbalance || 0).toFixed(2)}</li>
+                                            <li>Deviation: ${Number(comp.deviation || 0).toFixed(2)}</li>
+                                            <li>Price Move: ${Number(comp.priceMove || 0).toFixed(2)}</li>
+                                            <li>Liquidity: ${Number(comp.liquidity || 0).toFixed(2)}</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Summary</h6>
+                                        <table class="table table-sm">
+                                            <tr><td>Vol Buy (2h)</td><td>${getNumeric(data,'count_VOL_minute_120_buy','vol_buy_2JAM') || 0}</td></tr>
+                                            <tr><td>Vol Sell (2h)</td><td>${getNumeric(data,'count_VOL_minute_120_sell','vol_sell_2JAM') || 0}</td></tr>
+                                            <tr><td>Vol Dur (2h)</td><td>${getNumeric(data,'percent_sum_VOL_minute_120_buy') || data.percent_sum_VOL_minute_120_buy || 0}%</td></tr>
+                                            <tr><td>Price</td><td>${data.last || 0}</td></tr>
+                                        </table>
+                                    </div>
+                                </div>`;
+
+                        // wire export buttons
+                        const btnJson = document.getElementById('insightExportJson');
+                        const btnCsv = document.getElementById('insightExportCsv');
+                        btnJson.onclick = () => window.exportInsightJSON(coin, data);
+                        btnCsv.onclick = () => window.exportInsightCSV(coin, data);
+
+                        // show modal using Bootstrap
+                        try {
+                                const bsModal = new bootstrap.Modal(modalEl);
+                                bsModal.show();
+                        } catch (e) {
+                                console.warn('Bootstrap modal not available, falling back to alert', e);
+                                alert(`${coin} — Risk: ${risk}%`);
+                        }
+                };
+
+                // Show insight in the Insight tab (populate the insight pane and activate the tab)
+                window.showInsightTab = function(coin, data) {
+                    try {
+                        const pane = document.getElementById('insightPaneBody');
+                        if (!pane) return showInsightModal(coin, data);
+                        const risk = data.risk_score || (data._analytics && data._analytics.riskScore) || 0;
+                        const comp = (data._analytics && data._analytics.components) || {};
+                        const hist = data._history || [];
+                        // compute price position
+                        const currentPrice = parseFloat(data.last) || 0;
+                        const highPrice = parseFloat(data.high) || currentPrice;
+                        const lowPrice = parseFloat(data.low) || currentPrice;
+                        const priceRange = highPrice - lowPrice;
+                        const pricePos = priceRange > 0 ? Math.round(((currentPrice - lowPrice) / priceRange) * 100) : 50;
+
+                        // recommendation breakdown
+                        const rec = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePos) : { recommendation: 'N/A', className: '', score:0, confidence:0 };
+
+                        // timeframes to show
+                        const tfs = [
+                            {k:'1m', buyKeys:['count_VOL_minute1_buy','vol_buy_1MENIT','vol_buy_1m'], sellKeys:['count_VOL_minute1_sell','vol_sell_1MENIT','vol_sell_1m'], avgKeys:['avg_VOLCOIN_buy_1MENIT']},
+                            {k:'5m', buyKeys:['count_VOL_minute_5_buy','vol_buy_5MENIT','vol_buy_5m'], sellKeys:['count_VOL_minute_5_sell','vol_sell_5MENIT','vol_sell_5m'], avgKeys:['avg_VOLCOIN_buy_5MENIT']},
+                            {k:'10m', buyKeys:['count_VOL_minute_10_buy','vol_buy_10MENIT','vol_buy_10m'], sellKeys:['count_VOL_minute_10_sell','vol_sell_10MENIT','vol_sell_10m'], avgKeys:['avg_VOLCOIN_buy_10MENIT']},
+                            {k:'15m', buyKeys:['count_VOL_minute_15_buy','vol_buy_15MENIT','vol_buy_15m'], sellKeys:['count_VOL_minute_15_sell','vol_sell_15MENIT','vol_sell_15m'], avgKeys:['avg_VOLCOIN_buy_15MENIT']},
+                            {k:'30m', buyKeys:['count_VOL_minute_30_buy','vol_buy_30MENIT','vol_buy_30m'], sellKeys:['count_VOL_minute_30_sell','vol_sell_30MENIT','vol_sell_30m'], avgKeys:['avg_VOLCOIN_buy_30MENIT']},
+                            {k:'60m', buyKeys:['count_VOL_minute_60_buy','vol_buy_1JAM','vol_buy_60MENIT'], sellKeys:['count_VOL_minute_60_sell','vol_sell_1JAM','vol_sell_60MENIT'], avgKeys:['avg_VOLCOIN_buy_1JAM']},
+                            {k:'120m', buyKeys:['count_VOL_minute_120_buy','vol_buy_2JAM','vol_buy_120MENIT'], sellKeys:['count_VOL_minute_120_sell','vol_sell_2JAM','vol_sell_120MENIT'], avgKeys:['avg_VOLCOIN_buy_2JAM']},
+                            {k:'24h', buyKeys:['count_VOL_minute_1440_buy','vol_buy_24JAM','vol_buy_24h'], sellKeys:['count_VOL_minute_1440_sell','vol_sell_24JAM','vol_sell_24h'], avgKeys:['avg_VOLCOIN_buy_24JAM']}
+                        ];
+
+                        const tfRows = [];
+                        const spikes = [];
+                        for (const t of tfs) {
+                            const b = getNumeric(data, ...t.buyKeys);
+                            const s = getNumeric(data, ...t.sellKeys);
+                            const a = getNumeric(data, ...t.avgKeys);
+                            const ratio = a > 0 ? (b / a) : (s>0 ? (b / (s||1)) : 0);
+                            const buyShare = (b + s) > 0 ? Math.round((b / (b + s)) * 100) : 0;
+                            tfRows.push({k: t.k, buy: b, sell: s, avg: a, buyShare, ratio});
+                            if (a > 0 && b / a >= 2) spikes.push({k: t.k, ratio: b / a, buy: b, avg: a});
+                        }
+                        spikes.sort((x,y)=>y.ratio-x.ratio);
+
+                        // build HTML
+                        let tfTable = '<table class="table table-sm text-light"><thead><tr><th>TF</th><th>Buy</th><th>Sell</th><th>Avg</th><th>Buy %</th><th>Vol/Avg</th></tr></thead><tbody>';
+                        for (const r of tfRows) tfTable += `<tr><td>${r.k}</td><td>${r.buy}</td><td>${r.sell}</td><td>${r.avg}</td><td>${r.buyShare}%</td><td>${r.avg>0? (r.buy/r.avg).toFixed(2)+'x':'-'}</td></tr>`;
+                        tfTable += '</tbody></table>';
+
+                        const topSpikeHtml = spikes.length>0 ? `<div class="mb-2"><strong>Top Spike:</strong> ${spikes[0].k} — ${spikes[0].ratio.toFixed(2)}x (buy ${spikes[0].buy} vs avg ${spikes[0].avg})</div>` : '<div class="mb-2 text-muted">No significant spikes (vol >= 2x avg)</div>';
+
+                        pane.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div><h4 class="mb-0">🔍 ${coin} — Insight</h4><small class="text-muted">Last update: ${data.update_time || data.update_time_VOLCOIN || '-'}</small></div>
+                                <div class="text-end"><small>Price: ${data.last||0} • Change: ${data.percent_change||0}%</small><div class="mt-1"><strong>Recommendation:</strong> ${rec.recommendation || 'N/A'} (${rec.confidence || 0}%)</div></div>
+                            </div>
+                            <div class="mb-3">${drawSparkline(hist, 760, 100)}</div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <h6>Metrics</h6>
+                                    <p><strong>Risk:</strong> ${risk}%</p>
+                                    <p><strong>Price Pos:</strong> ${pricePos}%</p>
+                                    <p><strong>Vol Buy (2h):</strong> ${getNumeric(data,'count_VOL_minute_120_buy','vol_buy_2JAM')||0}</p>
+                                    <p><strong>Vol Sell (2h):</strong> ${getNumeric(data,'count_VOL_minute_120_sell','vol_sell_2JAM')||0}</p>
+                                    <p><strong>Buy z-score (2h):</strong> ${data._analytics && data._analytics.zScoreBuy2h !== undefined ? data._analytics.zScoreBuy2h : 'N/A'}</p>
+                                    <p><strong>Sell z-score (2h):</strong> ${data._analytics && data._analytics.zScoreSell2h !== undefined ? data._analytics.zScoreSell2h : 'N/A'}</p>
+                                    <p><strong>Persistence (last3 buys > mean+std):</strong> ${data._analytics && data._analytics.persistenceBuy3 !== undefined ? data._analytics.persistenceBuy3 : '-'}</p>
+                                    ${data._analytics && data._analytics.divergence ? `<p class="text-warning"><strong>Divergence:</strong> ${data._analytics.divergence}</p>` : ''}
+                                    ${data._analytics && data._analytics.sharpInsights ? `<p><strong>Insight:</strong><br/>${data._analytics.sharpInsights.map(s=>`- ${s}`).join('<br/>')}</p>` : ''}
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Recommendation Breakdown</h6>
+                                    <p>Score: ${rec.score !== undefined ? rec.score.toFixed(2) : '0.00'} • Confidence: ${rec.confidence || 0}%</p>
+                                    <div class="progress mb-2" style="height:10px"><div class="progress-bar bg-success" role="progressbar" style="width:${rec.score>0?rec.confidence:0}%"></div><div class="progress-bar bg-danger" role="progressbar" style="width:${rec.score<0?rec.confidence:0}%"></div></div>
+                                    ${topSpikeHtml}
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Components</h6>
+                                    <ul>
+                                        <li>Imbalance: ${Number(comp.imbalance || 0).toFixed(2)}</li>
+                                        <li>Deviation: ${Number(comp.deviation || 0).toFixed(2)}</li>
+                                        <li>Price Move: ${Number(comp.priceMove || 0).toFixed(2)}</li>
+                                        <li>Liquidity: ${Number(comp.liquidity || 0).toFixed(2)}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mb-3"><h6>Timeframe Comparison</h6>${tfTable}</div>
+                            <div class="mb-3"><h6>Raw Data</h6><div class="d-flex gap-2"><button class="btn btn-outline-primary btn-sm" id="insightCopyJson">Copy JSON</button><button class="btn btn-outline-secondary btn-sm" id="insightExportJsonPane">Export JSON</button><button class="btn btn-outline-success btn-sm" id="insightExportCsvPane">Export CSV</button></div><pre id="insightRaw" style="max-height:200px;overflow:auto;margin-top:8px;background:#0b1220;padding:8px;border-radius:6px;color:#9ca3af;">${JSON.stringify(data,null,2)}</pre></div>
+                        `;
+
+                        document.getElementById('insightCopyJson').onclick = function() {
+                            try { navigator.clipboard.writeText(JSON.stringify(data,null,2)); } catch(e) { window.__displayError('Clipboard copy failed'); }
+                        };
+                        document.getElementById('insightExportJsonPane').onclick = () => window.exportInsightJSON(coin, data);
+                        document.getElementById('insightExportCsvPane').onclick = () => window.exportInsightCSV(coin, data);
+
+                        // activate the tab
+                        try {
+                            const tabEl = document.getElementById('insight-tab');
+                            if (tabEl) tabEl.click();
+                        } catch (e) { console.warn('Could not activate insight tab', e); }
+                    } catch (e) { console.error('showInsightTab error', e); window.__displayError(e); }
+                };
+
+        // Object to store data by coin
+        const coinDataMap = {};
+        // track which coins we've logged (to avoid noisy logs)
+        const loggedCoins = new Set();
+
+        ws.onopen = () => {
+            console.log("WebSocket connected.");
+            document.getElementById('loading').style.display = 'none';
+        };
+
+        ws.onmessage = (event) => {
+            const raw = JSON.parse(event.data);
+            const coin = raw.coin; // Extract the coin from data
+            if (!coin) return; // If there's no coin, skip
+
+            // Debug: log keys and 24h-related fields once per coin (helps find naming mismatches)
+            if (!loggedCoins.has(coin)) {
+                try {
+                    // console.log('[WS] Received keys for', coin, Object.keys(raw));
+                    // console.log('[WS] 24h candidates for', coin, {
+                    //     count_VOL_minute_1440_buy: raw.count_VOL_minute_1440_buy,
+                    //     count_VOL_minute_1440_sell: raw.count_VOL_minute_1440_sell,
+                    //     vol_buy_24JAM: raw.vol_buy_24JAM,
+                    //     vol_sell_24JAM: raw.vol_sell_24JAM,
+                    //     vol_buy_24jam: raw.vol_buy_24jam,
+                    //     vol_sell_24jam: raw.vol_sell_24jam,
+                    //     vol_buy_24h: raw.vol_buy_24h,
+                    //     vol_sell_24h: raw.vol_sell_24h
+                    // });
+                } catch (e) { console.error('Logging error', e); }
+                loggedCoins.add(coin);
+            }
+
+            // Keep only fields that are used by the table to reduce noise
+            const keep = [
+                // core
+                'coin','last','percent_change','open','previous','high','low','update_time','update_time_VOLCOIN',
+                // percent/durability fields (various names)
+                'percent_vol_buy_1min','percent_vol_buy_5min','percent_vol_buy_10min','percent_vol_buy_15min','percent_vol_buy_20min','percent_vol_buy_30min','percent_vol_buy_60min','percent_vol_buy_120min',
+                'percent_vol_sell_1min','percent_vol_sell_5min','percent_vol_sell_10min','percent_vol_sell_15min','percent_vol_sell_20min','percent_vol_sell_30min','percent_vol_sell_60min','percent_vol_sell_120min',
+                'percent_sum_VOL_minute_120_buy','percent_sum_VOL_overall_buy',
+                // 2h / 120min totals
+                'count_VOL_minute_120_buy','count_VOL_minute_120_sell','vol_buy_2JAM','vol_sell_2JAM','vol_buy_120MENIT','vol_sell_120MENIT',
+                // 24h
+                'count_VOL_minute_1440_buy','count_VOL_minute_1440_sell','vol_buy_24JAM','vol_sell_24JAM','vol_buy_24jam','vol_sell_24jam','vol_buy_24h','vol_sell_24h','total_vol','total_vol_fiat',
+                // smaller timeframes (1m,5m,10m,15m,20m,30m,60m)
+                'vol_buy_1MENIT','vol_sell_1MENIT','vol_buy_5MENIT','vol_sell_5MENIT','vol_buy_10MENIT','vol_sell_10MENIT','vol_buy_15MENIT','vol_sell_15MENIT','vol_buy_20MENIT','vol_sell_20MENIT','vol_buy_30MENIT','vol_sell_30MENIT','vol_buy_1JAM','vol_sell_1JAM',
+                // averages for timeframes
+                'avg_VOLCOIN_buy_1MENIT','avg_VOLCOIN_sell_1MENIT','avg_VOLCOIN_buy_5MENIT','avg_VOLCOIN_sell_5MENIT','avg_VOLCOIN_buy_10MENIT','avg_VOLCOIN_sell_10MENIT','avg_VOLCOIN_buy_15MENIT','avg_VOLCOIN_sell_15MENIT','avg_VOLCOIN_buy_20MENIT','avg_VOLCOIN_sell_20MENIT','avg_VOLCOIN_buy_30MENIT','avg_VOLCOIN_sell_30MENIT','avg_VOLCOIN_buy_1JAM','avg_VOLCOIN_sell_1JAM','avg_VOLCOIN_buy_2JAM','avg_VOLCOIN_sell_2JAM','avg_VOLCOIN_buy_24JAM','avg_VOLCOIN_sell_24JAM'
+            ];
+
+            const data = {};
+            for (const k of keep) {
+                if (raw[k] !== undefined) data[k] = raw[k];
+                // also try lowercase variants
+                else if (raw[k.toLowerCase()] !== undefined) data[k] = raw[k.toLowerCase()];
+            }
+            // always keep coin
+            data.coin = coin;
+
+            // Compute client-side analytics (risk, ratios, deviation) for recent payload
+            function computeAnalytics(p) {
+                const toNum = (v) => {
+                    if (v === undefined || v === null) return 0;
+                    if (typeof v === 'number') return v;
+                    const s = String(v).replace(/,/g, '');
+                    const n = Number(s);
+                    return isNaN(n) ? 0 : n;
+                };
+
+                const out = {};
+                out.volBuy2h = toNum(p.count_VOL_minute_120_buy) || toNum(p.vol_buy_2JAM) || toNum(p.vol_buy_120MENIT) || toNum(p.vol_buy_2jam);
+                out.volSell2h = toNum(p.count_VOL_minute_120_sell) || toNum(p.vol_sell_2JAM) || toNum(p.vol_sell_120MENIT) || toNum(p.vol_sell_2jam);
+                out.total2h = out.volBuy2h + out.volSell2h;
+                out.volRatioBuySell_percent = out.volSell2h > 0 ? (out.volBuy2h / out.volSell2h) * 100 : (out.volBuy2h > 0 ? 999 : 0);
+                out.volDurability2h_percent = out.total2h > 0 ? (out.volBuy2h / out.total2h) * 100 : 0;
+
+                out.avgBuy2h = toNum(p.avg_VOLCOIN_buy_2JAM) || toNum(p.avg_VOLCOIN_buy_2HOUR) || toNum(p.avg_VOLCOIN_buy_2jam) || toNum(p.avg_VOLCOIN_buy_120MENIT);
+                out.avgSell2h = toNum(p.avg_VOLCOIN_sell_2JAM) || toNum(p.avg_VOLCOIN_sell_2HOUR) || toNum(p.avg_VOLCOIN_sell_2jam) || toNum(p.avg_VOLCOIN_sell_120MENIT);
+                out.volBuy_vs_avg_percent = out.avgBuy2h > 0 ? (out.volBuy2h / out.avgBuy2h) * 100 : (out.volBuy2h > 0 ? 999 : 0);
+                out.volSell_vs_avg_percent = out.avgSell2h > 0 ? (out.volSell2h / out.avgSell2h) * 100 : (out.volSell2h > 0 ? 999 : 0);
+
+                // Use coin-only totals (ignore fiat). total_vol is coin amount (sum of trades)
+                const totalVol = toNum(p.total_vol) || (out.total2h || 0);
+                out.liquidity_avg_trade_value = totalVol; // use coin-only total as liquidity proxy
+
+                // Simple rule-based risk scoring (0 low - 100 high)
+                const comp = {};
+                comp.imbalance = Math.abs(50 - out.volDurability2h_percent) * 0.8; // up to ~40
+                const devBuy = out.avgBuy2h > 0 ? Math.max(0, 50 - out.volBuy_vs_avg_percent) : 0;
+                const devSell = out.avgSell2h > 0 ? Math.max(0, 50 - out.volSell_vs_avg_percent) : 0;
+                comp.deviation = Math.max(devBuy, devSell) * 0.5;
+                const pctChange = toNum(p.percent_change) || ((toNum(p.last) && toNum(p.previous)) ? ((toNum(p.last) - toNum(p.previous)) / toNum(p.previous)) * 100 : 0);
+                comp.priceMove = Math.min(30, Math.abs(pctChange) * 2);
+                comp.liquidity = out.liquidity_avg_trade_value > 0 ? Math.max(0, 20 - Math.log10(out.liquidity_avg_trade_value + 1) * 4) : 10;
+                const riskScore = Math.min(100, comp.imbalance + comp.deviation + comp.priceMove + comp.liquidity);
+                out.riskScore = Math.round(riskScore);
+                out.components = comp;
+                return out;
+            }
+
+            // attach analytics and maintain short history for sparkline and z-scores
+            try {
+                data._analytics = computeAnalytics(data);
+                data.risk_score = data._analytics.riskScore;
+                // keep history; prefer persisted history when available
+                if (!data._history || !Array.isArray(data._history) || data._history.length === 0) {
+                    // try load persisted
+                    const persisted = persistHistoryEnabled ? loadPersistedHistory(coin) : [];
+                    data._history = (persisted && persisted.length > 0) ? persisted.slice(-MAX_HISTORY) : [];
+                }
+                data._history.push({ ts: Date.now(), volBuy2h: data._analytics.volBuy2h || 0, volSell2h: data._analytics.volSell2h || 0, price: data.last || 0 });
+                if (data._history.length > MAX_HISTORY) data._history = data._history.slice(-MAX_HISTORY);
+                // save (throttled)
+                try { savePersistedHistory(coin, data._history); } catch(e) {}
+
+                // --- Additional sharp insights (z-scores, persistence, divergence) ---
+                try {
+                    const hist = data._history.map(h => ({buy: Number(h.volBuy2h||0), sell: Number(h.volSell2h||0), price: Number(h.price||0)}));
+                    function meanStd(arr) {
+                        if (!arr || arr.length === 0) return {mean:0, std:0};
+                        const m = arr.reduce((s,v)=>s+v,0)/arr.length;
+                        const varr = arr.reduce((s,v)=>s+Math.pow(v-m,2),0)/arr.length;
+                        return { mean: m, std: Math.sqrt(varr) };
+                    }
+                    const buySeries = hist.map(h=>h.buy);
+                    const sellSeries = hist.map(h=>h.sell);
+                    const buyStat = meanStd(buySeries);
+                    const sellStat = meanStd(sellSeries);
+                    const currBuy = data._analytics.volBuy2h || 0;
+                    const currSell = data._analytics.volSell2h || 0;
+
+                    // require a minimum number of samples and non-zero std to compute z-scores
+                    const MIN_SAMPLES_FOR_Z = 6;
+                    let zBuy = null, zSell = null;
+                    if (buySeries.length >= MIN_SAMPLES_FOR_Z && buyStat.std > 0) {
+                        zBuy = (currBuy - buyStat.mean) / buyStat.std;
+                    }
+                    if (sellSeries.length >= MIN_SAMPLES_FOR_Z && sellStat.std > 0) {
+                        zSell = (currSell - sellStat.mean) / sellStat.std;
+                    }
+
+                    // persistence: count of last 3 points where buy > mean+std, only when stats meaningful
+                    const lastN = 3;
+                    let persistBuy = null;
+                    if (buySeries.length >= lastN && buyStat.std > 0) {
+                        const recent = buySeries.slice(Math.max(0, buySeries.length - lastN));
+                        persistBuy = recent.filter(v => v > (buyStat.mean + buyStat.std)).length;
+                    }
+
+                    // divergence: price down but buy durability high
+                    const pctChange = Number(data.percent_change) || (data.last && data.previous ? ((Number(data.last)-Number(data.previous))/Number(data.previous))*100 : 0);
+                    const volDur2h = data._analytics.volDurability2h_percent || 0;
+                    let divergence = null;
+                    if (pctChange < -0.5 && volDur2h >= 60 && zBuy > 1) divergence = 'Bullish divergence: price down while buy durability & volume surge';
+                    else if (pctChange > 0.5 && volDur2h <= 40 && zSell > 1) divergence = 'Bearish divergence: price up but sell pressure increasing';
+
+                    data._analytics.zScoreBuy2h = (zBuy === null || zBuy === undefined) ? undefined : Number(zBuy.toFixed(2));
+                    data._analytics.zScoreSell2h = (zSell === null || zSell === undefined) ? undefined : Number(zSell.toFixed(2));
+                    data._analytics.persistenceBuy3 = (persistBuy === null || persistBuy === undefined) ? undefined : persistBuy; // 0..3 or undefined
+                    data._analytics.divergence = divergence;
+
+                    // sharp insight summary
+                    let sharp = [];
+                    if (zBuy >= 2 && persistBuy >= 2) sharp.push('Strong buy momentum (z>=2 & persistent)');
+                    if (zBuy >= 1.5 && volDur2h >= 60) sharp.push('Elevated buy interest vs history');
+                    if (divergence) sharp.push(divergence);
+                    if (sharp.length === 0) sharp.push('No strong anomalies detected');
+                    data._analytics.sharpInsights = sharp;
+                    // trigger alert if sharp insights are meaningful
+                    try {
+                        const meaningful = sharp.filter(s => s && !/No strong anomalies detected/i.test(s));
+                        if (meaningful.length > 0) {
+                            const now = Date.now();
+                            const last = lastAlertAt[coin] || 0;
+                            // throttle per coin: 60s
+                            if (now - last > 60*1000) {
+                                lastAlertAt[coin] = now;
+                                const title = `${coin} — Alert`;
+                                const msg = meaningful.join(' • ');
+                                showAlertBanner(title, msg, 'warning', 10000);
+                                // send webhook if configured
+                                sendAlertWebhook(coin, { insights: meaningful, ts: now });
+                            }
+                        }
+                    } catch(e) { console.warn('alert trigger error', e); }
+                } catch(e) { console.error('analytics extras error', e); }
+
+            } catch(e){ data._analytics = {}; data.risk_score = 0; }
+
+            // Derive percent_sum_VOL_* fields from volume / avg if backend didn't provide them.
+            // local numeric getter (robust to multiple key names)
+            function localGetNumeric(obj, ...keys) {
+                if (!obj) return 0;
+                const lower = {};
+                for (const kk in obj) {
+                    try { lower[kk.toLowerCase()] = obj[kk]; } catch (e) {}
+                }
+                for (const key of keys) {
+                    if (!key) continue;
+                    if (obj[key] !== undefined && obj[key] !== null) {
+                        const v = obj[key];
+                        const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
+                        if (!isNaN(n)) return n;
+                    }
+                    const lk = key.toLowerCase();
+                    if (lower[lk] !== undefined && lower[lk] !== null) {
+                        const v = lower[lk];
+                        const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
+                        if (!isNaN(n)) return n;
+                    }
+                }
+                return 0;
+            }
+
+            const timeframeMap = [
+                { pctKey: 'percent_sum_VOL_minute1_buy', volKeys: ['count_VOL_minute1_buy','vol_buy_1MENIT','vol_buy_1m'], avgKeys: ['avg_VOLCOIN_buy_1MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_5_buy', volKeys: ['count_VOL_minute_5_buy','vol_buy_5MENIT','vol_buy_5m'], avgKeys: ['avg_VOLCOIN_buy_5MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_10_buy', volKeys: ['count_VOL_minute_10_buy','vol_buy_10MENIT','vol_buy_10m'], avgKeys: ['avg_VOLCOIN_buy_10MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_15_buy', volKeys: ['count_VOL_minute_15_buy','vol_buy_15MENIT','vol_buy_15m'], avgKeys: ['avg_VOLCOIN_buy_15MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_20_buy', volKeys: ['count_VOL_minute_20_buy','vol_buy_20MENIT','vol_buy_20m'], avgKeys: ['avg_VOLCOIN_buy_20MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_30_buy', volKeys: ['count_VOL_minute_30_buy','vol_buy_30MENIT','vol_buy_30m'], avgKeys: ['avg_VOLCOIN_buy_30MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_60_buy', volKeys: ['count_VOL_minute_60_buy','vol_buy_1JAM','vol_buy_60MENIT'], avgKeys: ['avg_VOLCOIN_buy_1JAM','avg_VOLCOIN_buy_60MENIT'] },
+                { pctKey: 'percent_sum_VOL_minute_120_buy', volKeys: ['count_VOL_minute_120_buy','vol_buy_2JAM','vol_buy_120MENIT'], avgKeys: ['avg_VOLCOIN_buy_2JAM','avg_VOLCOIN_buy_120MENIT'] },
+                { pctKey: 'percent_sum_VOL_overall_buy', volKeys: ['count_VOL_minute_1440_buy','vol_buy_24JAM','vol_buy_24h'], avgKeys: ['avg_VOLCOIN_buy_24JAM'] }
+            ];
+
+            for (const tf of timeframeMap) {
+                // if backend already provided a value, skip
+                if (data[tf.pctKey] !== undefined && data[tf.pctKey] !== null) continue;
+                const volBuy = localGetNumeric(data, ...tf.volKeys);
+                const avgBuy = localGetNumeric(data, ...tf.avgKeys);
+                // If avg present and >0, compute vol/avg*100; else fallback to buy/(buy+sell)*100 when possible
+                let pct = 0;
+                if (avgBuy > 0) {
+                    pct = Math.round((volBuy / avgBuy) * 100);
+                } else {
+                    // try compute by proportion of buy vs total
+                    const volSellKeyGuess = tf.volKeys.map(k => k.replace(/buy/i,'sell'));
+                    const volSell = localGetNumeric(data, ...volSellKeyGuess, 'count_VOL_minute_120_sell');
+                    const total = (volBuy || 0) + (volSell || 0);
+                    pct = total > 0 ? Math.round((volBuy / total) * 100) : 0;
+                }
+                data[tf.pctKey] = pct;
+            }
+
+            // Store sanitized data by coin
+            coinDataMap[coin] = data;
+
+            updateTable(); // Update table after receiving new data
+        };
+
+        ws.onclose = () => console.log("WebSocket connection closed.");
+        ws.onerror = (error) => console.error("WebSocket error:", error);
+
+        // Function to update table based on filter, row limit, and sort order
+        // Helper: robust numeric getter (try multiple key variants and normalize strings)
+        function getNumeric(data, ...keys) {
+            if (!data) return 0;
+            // build lowercase map for fallback
+            const lower = {};
+            for (const k in data) {
+                try {
+                    lower[k.toLowerCase()] = data[k];
+                } catch (e) {}
+            }
+
+            for (const key of keys) {
+                if (!key) continue;
+                // try exact
+                if (data[key] !== undefined && data[key] !== null) {
+                    const v = data[key];
+                    const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
+                    if (!isNaN(n)) return n;
+                }
+                // try lowercase variant
+                const lk = key.toLowerCase();
+                if (lower[lk] !== undefined && lower[lk] !== null) {
+                    const v = lower[lk];
+                    const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
+                    if (!isNaN(n)) return n;
+                }
+            }
+            return 0;
+        }
+
+        // Recommendation engine: normalized, z-score aware, with per-coin cooldown and logging
+        const RECOMMENDATION_COOLDOWN_MS = 120000; // 2 minutes cooldown to avoid flip-flopping
+        const RECOMMENDATION_THRESHOLD = 0.30; // absolute score threshold to emit BUY/SELL
+        const recommendationCooldowns = window._recommendationCooldowns || (window._recommendationCooldowns = {});
+
+        function _tanh(x){ if (Math.tanh) return Math.tanh(x); const e = Math.exp(2*x); return (e-1)/(e+1); }
+
+        // Compute a simple ATR-like measure (average absolute change) from history
+        function computeATR(history, periods = 14) {
+            try {
+                if (!history || !Array.isArray(history) || history.length < 2) return 0;
+                const arr = history.slice(-Math.max(periods, 2));
+                let sum = 0;
+                let count = 0;
+                for (let i = 1; i < arr.length; i++) {
+                    const p0 = Number(arr[i-1].price) || Number(arr[i-1].last) || 0;
+                    const p1 = Number(arr[i].price) || Number(arr[i].last) || 0;
+                    if (p0 > 0 && p1 > 0) {
+                        sum += Math.abs(p1 - p0);
+                        count++;
+                    }
+                }
+                return count > 0 ? (sum / count) : 0;
+            } catch (e) { return 0; }
+        }
+
+        function calculateRecommendation(data, pricePosition) {
+            if (!data) {
+                return { recommendation: 'HOLD', confidence: 0, className: 'recommendation-hold', score: 0 };
+            }
+            // Extract analytics and fallbacks
+            const a = data._analytics || {};
+            const volDur2h = a.volDurability2h_percent ?? getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
+            const volDur24h = a.volDurability24h_percent ?? getNumeric(data, 'percent_sum_VOL_overall_buy', 'percent_vol_buy_24h');
+            const volBuy2h = a.volBuy2h ?? getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT', 'vol_buy_2jam');
+            const volSell2h = a.volSell2h ?? getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM', 'vol_sell_120MENIT', 'vol_sell_2jam');
+            const zBuy = a.zScoreBuy2h ?? 0;
+            const zSell = a.zScoreSell2h ?? 0;
+            const persistenceBuy3 = a.persistenceBuy3 ?? 0;
+            const divergence = a.divergence ?? 0;
+            const riskScore = a.riskScore ?? 0;
+
+            // Normalized feature construction (all in [-1,1])
+            const priceBias = (50 - (Number(pricePosition) || 50)) / 50; // 1 => strong buy bias, -1 => strong sell bias
+            const volDurNorm = ((Number(volDur2h) || 50) - 50) / 50; // positive => buy-dominant
+            const vol24Norm = ((Number(volDur24h) || 50) - 50) / 50;
+            // Use z-scores when available; map to [-1,1] via tanh scaling
+            const zImbalance = _tanh((Number(zBuy) - Number(zSell)) / 3); // >0 => buy pressure
+            const persistenceNorm = ((Number(persistenceBuy3) || 0) - 1.5) / 1.5; // approx -1..1
+            const divergenceNorm = Math.max(-1, Math.min(1, (Number(divergence) || 0) / 10));
+            const riskPenalty = Math.max(0, Math.min(1, (Number(riskScore) || 0) / 100));
+
+            // Feature weights (tuned to prioritize imbalance & durability)
+            const W = {
+                price: 0.18,
+                volDur: 0.22,
+                imbalance: 0.38,
+                persistence: 0.14,
+                divergence: 0.08
+            };
+
+            // Raw signed score in [-1.5,1.5] roughly; then clamp to [-1,1]
+            let rawScore = 0;
+            rawScore += W.price * priceBias;
+            rawScore += W.volDur * volDurNorm;
+            rawScore += W.imbalance * zImbalance;
+            rawScore += W.persistence * persistenceNorm;
+            rawScore += W.divergence * divergenceNorm;
+
+            // Apply small risk penalty to reduce magnitude
+            rawScore = rawScore * (1 - 0.5 * riskPenalty);
+            const score = Math.max(-1, Math.min(1, rawScore));
+
+            // Confidence: scale absolute score to 0..100 using smooth mapping
+            const confidence = Math.round(Math.abs(score) * 100);
+
+            // Determine recommendation label
+            let recommendation = 'HOLD';
+            if (score >= RECOMMENDATION_THRESHOLD) recommendation = 'BUY';
+            else if (score <= -RECOMMENDATION_THRESHOLD) recommendation = 'SELL';
+
+            // Per-coin cooldown to avoid flip-flopping
+            const coin = data.coin || data.symbol || data.code || 'unknown';
+            const now = Date.now();
+            const last = recommendationCooldowns[coin] || { ts: 0, rec: null };
+            if (now - last.ts < RECOMMENDATION_COOLDOWN_MS && last.rec && last.rec !== recommendation) {
+                // During cooldown prefer HOLD rather than flip
+                recommendation = 'HOLD';
+            }
+            // Save cooldown info (if recommendation is non-HOLD, update timestamp and rec)
+            if (recommendation !== 'HOLD') {
+                recommendationCooldowns[coin] = { ts: now, rec: recommendation };
+            } else if (!recommendationCooldowns[coin]) {
+                recommendationCooldowns[coin] = { ts: 0, rec: null };
+            }
+
+            // Class name for styling
+            const className = recommendation === 'BUY' ? 'recommendation-buy' : (recommendation === 'SELL' ? 'recommendation-sell' : 'recommendation-hold');
+
+            // Append to lightweight recommendation log on the data analytics object for later backtesting
+            a.recommendationLog = a.recommendationLog || [];
+            a.recommendationLog.push({ ts: now, coin, score, recommendation, confidence, priceBias, volDurNorm, zImbalance, persistenceNorm, divergenceNorm, riskScore });
+            if (a.recommendationLog.length > 200) a.recommendationLog.shift();
+
+            return { recommendation, confidence, className, score };
+        }
+
+        // Quick sort function for popular metrics
+        function quickSort(criteria) {
+            document.getElementById('sortBy').value = criteria;
+            updateTable();
+            
+            // Show success message using Alerts tab banner instead of SweetAlert
+            try {
+                showAlertBanner('Sorted!', `Table sorted by ${criteria.replace('_', ' ').toUpperCase()}`, 'info', 1500);
+            } catch (e) {
+                console.log('Alert banner failed', e);
+            }
+        }
+
+        function updateTable() {
+            summaryBody.innerHTML = '';
+            volBody.innerHTML = '';
+            if (recsBody) recsBody.innerHTML = '';
+            // clear Vol Dur table as well so row limit applies consistently
+            const volDurBody = document.getElementById('volDurBody');
+            if (volDurBody) volDurBody.innerHTML = '';
+            if (spikeBody) spikeBody.innerHTML = '';
+            const spikeRows = []; // collect spikes across coins
+
+            const filterText = getActiveFilterValue();
+            const sortBy = sortBySelect.value;
+            const sortOrder = getSortOrderValue();
+            // Debugging: log current sort selection (helps diagnose if change events fire)
+            // try { console.debug && console.debug('updateTable sortBy=', sortBy, 'order=', sortOrder); } catch(e) {}
+            let rowCount = 0;
+            // count of rows inserted into the Recommendations table (separate from coin row count)
+            let recsRowCount = 0;
+            // flag to indicate we've filled the requested recs rows and can stop early
+            let doneRecs = false;
+
+            // Function to get sort value based on selected criteria
+            function getSortValue(data, criteria) {
+                // Helper: compute percent change from history when specific percent fields are missing
+                function computeHistoryPercentChange(d, lookbackMs) {
+                    try {
+                        if (!d || !d._history || !Array.isArray(d._history) || d._history.length === 0) return 0;
+                        const now = Date.now();
+                        // If lookbackMs not provided, use full history range
+                        if (!lookbackMs) {
+                            const first = d._history[0];
+                            const last = d._history[d._history.length - 1];
+                            if (!first || !last || !first.price) return 0;
+                            const p0 = Number(first.price) || 0;
+                            const p1 = Number(last.price) || 0;
+                            return p0 > 0 ? ((p1 - p0) / p0) * 100 : 0;
+                        }
+                        // Find the earliest point at or before now - lookbackMs
+                        const cutoff = now - lookbackMs;
+                        let point = null;
+                        for (let i = d._history.length - 1; i >= 0; i--) {
+                            if (d._history[i].ts <= cutoff) { point = d._history[i]; break; }
+                        }
+                        // if not found, use earliest
+                        if (!point) point = d._history[0];
+                        const last = d._history[d._history.length - 1];
+                        const p0 = Number(point.price) || 0;
+                        const p1 = Number(last.price) || 0;
+                        return p0 > 0 ? ((p1 - p0) / p0) * 100 : 0;
+                    } catch (e) { return 0; }
+                }
+
+                // Helper: parse lookback from criteria name (e.g., 'change_10sec_1' => 1s, 'change_5min_20' => 20min)
+                function parseLookbackMs(name) {
+                    try {
+                        const re = /(\d+)(sec|min|jam|hour|m)/ig;
+                        let match, lastMatch = null;
+                        while ((match = re.exec(name)) !== null) { lastMatch = match; }
+                        if (!lastMatch) {
+                            // fallback: pick last number as minutes
+                            const num = name.match(/(\d+)(?!.*\d)/);
+                            if (num) return Number(num[0]) * 60 * 1000;
+                            return null;
+                        }
+                        const val = Number(lastMatch[1]);
+                        const unit = (lastMatch[2] || '').toLowerCase();
+                        if (unit.startsWith('sec')) return val * 1000;
+                        if (unit === 'min' || unit === 'm') return val * 60 * 1000;
+                        if (unit === 'jam' || unit.startsWith('hour')) return val * 60 * 60 * 1000;
+                        return val * 60 * 1000;
+                    } catch (e) { return null; }
+                }
+
+                switch(criteria) {
+                    // Durability
+                    case 'vol_dur_2h':
+                        return parseFloat(data.percent_sum_VOL_minute_120_buy) || 0;
+                    case 'freq_dur_2h':
+                        return getNumeric(data, 'sum_minute_120_buy', 'count_VOL_minute_120_buy') || 0;
+
+                    // Price & Change
+                    case 'change':
+                        return parseFloat(data.percent_change) || 0;
+                    case 'price':
+                        return parseFloat(data.last) || 0;
+                    case 'price_position':
+                        const currentPrice = parseFloat(data.last) || 0;
+                        const highPrice = parseFloat(data.high) || currentPrice;
+                        const lowPrice = parseFloat(data.low) || currentPrice;
+                        const priceRange = highPrice - lowPrice;
+                        return priceRange > 0 ? ((currentPrice - lowPrice) / priceRange) * 100 : 50;
+                    case 'recommendation':
+                        try {
+                            if (typeof calculateRecommendation === 'function') {
+                                const rec = calculateRecommendation(data, 50); // Use 50 as default price position for sorting
+                                return rec && typeof rec.score === 'number' ? rec.score : 0; // Positive = Buy bias, Negative = Sell bias
+                            }
+                        } catch (err) {
+                            console.error('calculateRecommendation threw when sorting:', err);
+                        }
+                        return 0;
+
+    
+                    // Volume 24h
+                    case 'vol_buy_24h':
+                        return parseFloat(data.count_VOL_minute_1440_buy) || 0;
+                    case 'vol_sell_24h':
+                        return parseFloat(data.count_VOL_minute_1440_sell) || 0;
+                    case 'vol_total_24h':
+                        return (parseFloat(data.count_VOL_minute_1440_buy) || 0) + (parseFloat(data.count_VOL_minute_1440_sell) || 0);
+                    case 'avg_vol_buy_24h':
+                        return parseFloat(data.avg_VOLCOIN_buy_24HOUR) || 0;
+                    case 'avg_vol_sell_24h':
+                        return parseFloat(data.avg_VOLCOIN_sell_24HOUR) || 0;
+                    case 'avg_vol_buy_2h':
+                        return parseFloat(data.avg_VOLCOIN_buy_2HOUR) || 0;
+                    case 'avg_vol_sell_2h':
+                        return parseFloat(data.avg_VOLCOIN_sell_2HOUR) || 0;
+
+                    // Volume Ratio 2h
+                    case 'vol_ratio_2h':
+                        const volBuy2h = parseFloat(data.count_VOL_minute_120_buy) || 0;
+                        const volSell2h = parseFloat(data.count_VOL_minute_120_sell) || 0;
+                        return volSell2h > 0 ? (volBuy2h / volSell2h) * 100 : (volBuy2h > 0 ? 999 : 0);
+
+    
+                        
+                    // Volume 1h
+                    case 'vol_buy_1h':
+                        return parseFloat(data.count_VOL_minute_60_buy) || 0;
+                    case 'vol_sell_1h':
+                        return parseFloat(data.count_VOL_minute_60_sell) || 0;
+                    case 'vol_total_1h':
+                        return (parseFloat(data.count_VOL_minute_60_buy) || 0) + (parseFloat(data.count_VOL_minute_60_sell) || 0);
+                    case 'avg_vol_buy_1h':
+                        return parseFloat(data.avg_VOLCOIN_buy_1HOUR) || 0;
+                    case 'avg_vol_sell_1h':
+                        return parseFloat(data.avg_VOLCOIN_sell_1HOUR) || 0;
+
+ 
+                        
+                    // Volume 10m
+                    case 'vol_buy_10m':
+                        return parseFloat(data.count_VOL_minute_10_buy) || 0;
+                    case 'vol_sell_10m':
+                        return parseFloat(data.count_VOL_minute_10_sell) || 0;
+                    case 'vol_total_10m':
+                        return (parseFloat(data.count_VOL_minute_10_buy) || 0) + (parseFloat(data.count_VOL_minute_10_sell) || 0);
+                    case 'avg_vol_buy_10m':
+                        return parseFloat(data.avg_VOLCOIN_buy_10MENIT) || 0;
+                    case 'avg_vol_sell_10m':
+                        return parseFloat(data.avg_VOLCOIN_sell_10MENIT) || 0;
+
+      
+                        
+                    // Volume 5m
+                    case 'vol_buy_5m':
+                        return parseFloat(data.count_VOL_minute_5_buy) || 0;
+                    case 'vol_sell_5m':
+                        return parseFloat(data.count_VOL_minute_5_sell) || 0;
+                    case 'vol_total_5m':
+                        return (parseFloat(data.count_VOL_minute_5_buy) || 0) + (parseFloat(data.count_VOL_minute_5_sell) || 0);
+                    case 'avg_vol_buy_5m':
+                        return parseFloat(data.avg_VOLCOIN_buy_5MENIT) || 0;
+                    case 'avg_vol_sell_5m':
+                        return parseFloat(data.avg_VOLCOIN_sell_5MENIT) || 0;
+
+
+                        
+                    // Volume 30m
+                    case 'vol_buy_30m':
+                        return parseFloat(data.count_VOL_minute_30_buy) || 0;
+                    case 'vol_sell_30m':
+                        return parseFloat(data.count_VOL_minute_30_sell) || 0;
+                    case 'vol_total_30m':
+                        return (parseFloat(data.count_VOL_minute_30_buy) || 0) + (parseFloat(data.count_VOL_minute_30_sell) || 0);
+                    case 'avg_vol_buy_30m':
+                        return parseFloat(data.avg_VOLCOIN_buy_30MENIT) || 0;
+                    case 'avg_vol_sell_30m':
+                        return parseFloat(data.avg_VOLCOIN_sell_30MENIT) || 0;
+
+
+                        
+                    // Volume 20m
+                    case 'vol_buy_20m':
+                        return parseFloat(data.count_VOL_minute_20_buy) || 0;
+                    case 'vol_sell_20m':
+                        return parseFloat(data.count_VOL_minute_20_sell) || 0;
+                    case 'vol_total_20m':
+                        return (parseFloat(data.count_VOL_minute_20_buy) || 0) + (parseFloat(data.count_VOL_minute_20_sell) || 0);
+                    case 'avg_vol_buy_20m':
+                        return parseFloat(data.avg_VOLCOIN_buy_20MENIT) || 0;
+                    case 'avg_vol_sell_20m':
+                        return parseFloat(data.avg_VOLCOIN_sell_20MENIT) || 0;
+
+
+                        
+                    // Volume 15m
+                    case 'vol_buy_15m':
+                        return parseFloat(data.count_VOL_minute_15_buy) || 0;
+                    case 'vol_sell_15m':
+                        return parseFloat(data.count_VOL_minute_15_sell) || 0;
+                    case 'vol_total_15m':
+                        return (parseFloat(data.count_VOL_minute_15_buy) || 0) + (parseFloat(data.count_VOL_minute_15_sell) || 0);
+                    case 'avg_vol_buy_15m':
+                        return parseFloat(data.avg_VOLCOIN_buy_15MENIT) || 0;
+                    case 'avg_vol_sell_15m':
+                        return parseFloat(data.avg_VOLCOIN_sell_15MENIT) || 0;
+
+
+                        
+                    // Volume 1m
+                    case 'vol_buy_1m':
+                        return parseFloat(data.count_VOL_minute1_buy) || 0;
+                    case 'vol_sell_1m':
+                        return parseFloat(data.count_VOL_minute1_sell) || 0;
+                    case 'vol_total_1m':
+                        return (parseFloat(data.count_VOL_minute1_buy) || 0) + (parseFloat(data.count_VOL_minute1_sell) || 0);
+                    case 'avg_vol_buy_1m':
+                        return parseFloat(data.avg_VOLCOIN_buy_1MENIT) || 0;
+                    case 'avg_vol_sell_1m':
+                        return parseFloat(data.avg_VOLCOIN_sell_1MENIT) || 0;
+
+                    // Overall 24h
+                    case 'freq_dur_24h':
+                        return parseFloat(data.sum_overall_buy) || 0;
+                    case 'vol_dur_24h':
+                        return parseFloat(data.percent_sum_VOL_overall_buy) || 0;
+
+                    // Sum Durability
+                    case 'sum_min_1_buy':
+                        return parseFloat(data.sum_minute1_buy) || 0;
+                    case 'sum_min_5_buy':
+                        return parseFloat(data.sum_minute_5_buy) || 0;
+                    case 'sum_min_10_buy':
+                        return parseFloat(data.sum_minute_10_buy) || 0;
+                    case 'sum_min_15_buy':
+                        return parseFloat(data.sum_minute_15_buy) || 0;
+                    case 'sum_min_20_buy':
+                        return parseFloat(data.sum_minute_20_buy) || 0;
+                    case 'sum_min_30_buy':
+                        return parseFloat(data.sum_minute_30_buy) || 0;
+                    case 'sum_min_60_buy':
+                        return parseFloat(data.sum_minute_60_buy) || 0;
+                    case 'sum_min_120_buy':
+                        return parseFloat(data.sum_minute_120_buy) || 0;
+                    case 'sum_overall_buy':
+                        return parseFloat(data.sum_overall_buy) || 0;
+
+                    // Volume Durability
+                    case 'vol_dur_1m':
+                        return parseFloat(data.percent_sum_VOL_minute1_buy) || 0;
+                    case 'vol_dur_5m':
+                        return parseFloat(data.percent_sum_VOL_minute_5_buy) || 0;
+                    case 'vol_dur_10m':
+                        return parseFloat(data.percent_sum_VOL_minute_10_buy) || 0;
+                    case 'vol_dur_15m':
+                        return parseFloat(data.percent_sum_VOL_minute_15_buy) || 0;
+                    case 'vol_dur_20m':
+                        return parseFloat(data.percent_sum_VOL_minute_20_buy) || 0;
+                    case 'vol_dur_30m':
+                        return parseFloat(data.percent_sum_VOL_minute_30_buy) || 0;
+                    case 'vol_dur_60m':
+                        return parseFloat(data.percent_sum_VOL_minute_60_buy) || 0;
+                    case 'vol_dur_120m':
+                        return parseFloat(data.percent_sum_VOL_minute_120_buy) || 0;
+                    case 'vol_dur_overall':
+                        return parseFloat(data.percent_sum_VOL_overall_buy) || 0;
+
+                    // Change Variations
+                    case 'change_1min_4':
+                    case 'change_5min_20':
+                    case 'change_10sec_1':
+                    case 'change_10min_2':
+                    case 'change_10sec_2':
+                    case 'change_15min_2':
+                    case 'change_1min_5':
+                    case 'change_1jam_18':
+                    case 'change_20min_2':
+                    case 'change_2jam_10':
+                    case 'change_30min_1':
+                    case 'change_5min_25':
+                        // prefer explicit backend fields if available
+                        const direct = (function(){
+                            const map = {
+                                'change_1min_4':'percent_change_1Min_4','change_5min_20':'percent_change_5Min_20','change_10sec_1':'percent_change_10Second_1','change_10min_2':'percent_change_10Min_2','change_10sec_2':'percent_change_10Second_2','change_15min_2':'percent_change_15Min_2','change_1min_5':'percent_change_1Min_5','change_1jam_18':'percent_change_1jam_18','change_20min_2':'percent_change_20Min_2','change_2jam_10':'percent_change_2jam_10','change_30min_1':'percent_change_30Min_1','change_5min_25':'percent_change_5Min_25'
+                            };
+                            const key = map[criteria];
+                            if (key && (data[key] !== undefined && data[key] !== null)) return parseFloat(data[key]) || 0;
+                            // try lowercase variants
+                            if (key) {
+                                const lk = key.toLowerCase();
+                                if (data[lk] !== undefined && data[lk] !== null) return parseFloat(data[lk]) || 0;
+                            }
+                            return null;
+                        })();
+                        if (direct !== null && direct !== undefined) return direct;
+                        // fallback: compute from history; try to infer lookback from the criteria name
+                        const ms = parseLookbackMs(criteria);
+                        const pct = computeHistoryPercentChange(data, ms || undefined);
+                        return Number(pct) || 0;
+
+                    // Update Times (note: per-volume update_time fields are not used as a sorting/reference metric)
+                    case 'update_freq':
+                        return parseFloat(data.update_time_FREQ) || 0;
+                    case 'update_sum':
+                        return parseFloat(data.sum_update_time) || 0;
+                    case 'update_general':
+                        return parseFloat(data.update_time) || 0;
+
+                    // Total Volumes
+                    case 'total_vol_fiat':
+                        // legacy option: prefer coin-only total instead of fiat
+                        return parseFloat(data.total_vol) || 0;
+                    case 'total_vol':
+                        return parseFloat(data.total_vol) || 0;
+
+                    // Delay
+                    case 'delay_ms':
+                        return parseFloat(data.delay_ms_aggrade) || 0;
+
+                    default:
+                        return parseFloat(data.percent_sum_VOL_minute_120_buy) || 0;
+                }
+            }
+
+            // Convert coinDataMap to an array for sorting
+            const sortedCoins = Object.entries(coinDataMap)
+                .filter(([coinKey, data]) => {
+                    // Filter coins based on the filter input
+                    return !filterText || coinKey.toLowerCase().includes(filterText);
+                })
+                .sort(([coinKeyA, dataA], [coinKeyB, dataB]) => {
+                    const valueA = getSortValue(dataA, sortBy);
+                    const valueB = getSortValue(dataB, sortBy);
+
+                    if (sortOrder === 'asc') {
+                        return valueA - valueB; // Ascending order
+                    } else {
+                        return valueB - valueA; // Descending order
+                    }
+                });
+
+            // Loop through sorted and filtered data
+            for (const [coinKey, data] of sortedCoins) {
+                if (rowCount >= rowLimit) break; // Stop if row limit is reached
+
+                const coin = coinKey;
+                const price = (data.last || 0).toFixed(4);
+                const change = data.percent_change || 0;
+                const freqDur = data.sum_minute_120_buy || 0;
+                const volDur = getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min');
+                const freqBuy = getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM') || 0;
+                const freqSell = getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM') || 0;
+                const volBuy = getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT');
+                const volSell = getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM', 'vol_sell_120MENIT');
+
+                // Volume 24h data (support multiple field names)
+                const volBuy24h = getNumeric(data, 'count_VOL_minute_1440_buy', 'vol_buy_24JAM', 'vol_buy_24jam', 'vol_buy_24h', 'vol_buy_24H');
+                const volSell24h = getNumeric(data, 'count_VOL_minute_1440_sell', 'vol_sell_24JAM', 'vol_sell_24jam', 'vol_sell_24h', 'vol_sell_24H');
+
+                // Additional data for multiple timeframes
+                const freqBuy1m = getNumeric(data, 'count_VOL_minute1_buy', 'vol_buy_1MENIT', 'vol_buy_1m') || 0;
+                const freqSell1m = getNumeric(data, 'count_VOL_minute1_sell', 'vol_sell_1MENIT', 'vol_sell_1m') || 0;
+                const freqBuy5m = getNumeric(data, 'count_VOL_minute_5_buy', 'vol_buy_5MENIT', 'vol_buy_5m') || 0;
+                const freqSell5m = getNumeric(data, 'count_VOL_minute_5_sell', 'vol_sell_5MENIT', 'vol_sell_5m') || 0;
+                const freqBuy10m = getNumeric(data, 'count_VOL_minute_10_buy', 'vol_buy_10MENIT', 'vol_buy_10m') || 0;
+                const freqSell10m = getNumeric(data, 'count_VOL_minute_10_sell', 'vol_sell_10MENIT', 'vol_sell_10m') || 0;
+                const freqBuy60m = getNumeric(data, 'count_VOL_minute_60_buy', 'vol_buy_1JAM', 'vol_buy_60MENIT') || 0;
+                const freqSell60m = getNumeric(data, 'count_VOL_minute_60_sell', 'vol_sell_1JAM', 'vol_sell_60MENIT') || 0;
+
+                const volBuy1m = getNumeric(data, 'count_VOL_minute1_buy', 'vol_buy_1MENIT', 'vol_buy_1menit', 'vol_buy_1m', 'vol_buy_1min');
+                const volSell1m = getNumeric(data, 'count_VOL_minute1_sell', 'vol_sell_1MENIT', 'vol_sell_1menit', 'vol_sell_1m', 'vol_sell_1min');
+                const volBuy5m = getNumeric(data, 'count_VOL_minute_5_buy', 'vol_buy_5MENIT', 'vol_buy_5menit', 'vol_buy_5m', 'vol_buy_5min');
+                const volSell5m = getNumeric(data, 'count_VOL_minute_5_sell', 'vol_sell_5MENIT', 'vol_sell_5menit', 'vol_sell_5m', 'vol_sell_5min');
+                const volBuy10m = getNumeric(data, 'count_VOL_minute_10_buy', 'vol_buy_10MENIT', 'vol_buy_10menit', 'vol_buy_10m', 'vol_buy_10min');
+                const volSell10m = getNumeric(data, 'count_VOL_minute_10_sell', 'vol_sell_10MENIT', 'vol_sell_10menit', 'vol_sell_10m', 'vol_sell_10min');
+                const volBuy60m = getNumeric(data, 'count_VOL_minute_60_buy', 'vol_buy_1JAM', 'vol_buy_60MENIT', 'vol_buy_60menit', 'vol_buy_60m');
+                const volSell60m = getNumeric(data, 'count_VOL_minute_60_sell', 'vol_sell_1JAM', 'vol_sell_60MENIT', 'vol_sell_60menit', 'vol_sell_60m');
+
+                // Detect spikes: compare volume vs average for multiple timeframes
+                try {
+                    const spikeThreshold = 2.0; // spike when vol >= spikeThreshold * avg
+                    const timeframes = [
+                        {label: '1m', volKeys: ['count_VOL_minute1_buy','vol_buy_1MENIT','vol_buy_1min'], avgKeys: ['avg_VOLCOIN_buy_1MENIT','avg_VOLCOIN_buy_1MENIT']},
+                        {label: '5m', volKeys: ['count_VOL_minute_5_buy','vol_buy_5MENIT','vol_buy_5min'], avgKeys: ['avg_VOLCOIN_buy_5MENIT']},
+                        {label: '10m', volKeys: ['count_VOL_minute_10_buy','vol_buy_10MENIT','vol_buy_10min'], avgKeys: ['avg_VOLCOIN_buy_10MENIT']},
+                        {label: '15m', volKeys: ['vol_buy_15MENIT'], avgKeys: ['avg_VOLCOIN_buy_15MENIT']},
+                        {label: '20m', volKeys: ['vol_buy_20MENIT'], avgKeys: ['avg_VOLCOIN_buy_20MENIT']},
+                        {label: '30m', volKeys: ['vol_buy_30MENIT'], avgKeys: ['avg_VOLCOIN_buy_30MENIT']},
+                        {label: '60m', volKeys: ['count_VOL_minute_60_buy','vol_buy_1JAM','vol_buy_60MENIT'], avgKeys: ['avg_VOLCOIN_buy_1JAM']},
+                        {label: '120m', volKeys: ['count_VOL_minute_120_buy','vol_buy_2JAM','vol_buy_120MENIT'], avgKeys: ['avg_VOLCOIN_buy_2JAM']},
+                        {label: '24h', volKeys: ['count_VOL_minute_1440_buy','vol_buy_24JAM','vol_buy_24h'], avgKeys: ['avg_VOLCOIN_buy_24JAM']}
+                    ];
+
+                    for (const tf of timeframes) {
+                        const vol = getNumeric(data, ...tf.volKeys);
+                        const avg = getNumeric(data, ...tf.avgKeys);
+                        if (avg > 0 && vol / avg >= spikeThreshold) {
+                            spikeRows.push({ coin, timeframe: tf.label, vol, avg, ratio: vol / avg, update_time: data.update_time || data.update_time_VOLCOIN || 0 });
+                        }
+                    }
+                } catch (e) { console.error('Spike detection error', e); }
+
+                // Helper function for durability color coding (divided into 3 equal parts)
+                function getDurabilityClass(value) {
+                    if (value >= 67) return 'durability-excellent';  // Top 1/3: 67-100
+                    if (value >= 34) return 'durability-good';       // Middle 1/3: 34-66
+                    return 'durability-poor';                       // Bottom 1/3: 0-33
+                }
+
+                // Summary row (compact)
+                let row = summaryBody.insertRow();
+                const coinCell = row.insertCell(0);
+                coinCell.textContent = coin;
+                coinCell.style.cursor = 'pointer';
+                coinCell.className = 'text-primary';
+                coinCell.title = 'Click for insights';
+                coinCell.onclick = () => showInsightTab(coin, data);
+                row.insertCell(1).textContent = price;
+                let cell = row.insertCell(2);
+                cell.textContent = change + '%';
+                cell.className = change > 0 ? 'text-success fw-bold' : change < 0 ? 'text-danger fw-bold' : 'text-muted';
+
+                // Price Position (scaled 0-100 from low to high)
+                const currentPrice = parseFloat(data.last) || 0;
+                const highPrice = parseFloat(data.high) || currentPrice;
+                const lowPrice = parseFloat(data.low) || currentPrice;
+                const priceRange = highPrice - lowPrice;
+                const pricePosition = priceRange > 0 ? Math.round(((currentPrice - lowPrice) / priceRange) * 100) : 50;
+                cell = row.insertCell(3);
+                cell.textContent = pricePosition + '%';
+                cell.className = getDurabilityClass(pricePosition);
+
+                // Recommendation Algorithm
+                const recommendation = calculateRecommendation(data, pricePosition);
+                cell = row.insertCell(4);
+                cell.textContent = recommendation && recommendation.recommendation ? `${recommendation.recommendation} (${recommendation.confidence || 0}%)` : 'HOLD';
+                cell.className = recommendation && recommendation.className ? recommendation.className : 'recommendation-hold';
+
+                // Risk column
+                cell = row.insertCell(5);
+                const riskScore = data.risk_score || (data._analytics && data._analytics.riskScore) || 0;
+                cell.textContent = riskScore + '%';
+                cell.className = riskScore >= 67 ? 'text-danger fw-bold' : riskScore >= 40 ? 'text-warning fw-bold' : 'text-success fw-bold';
+
+                // Vol Buy/Sell 2h and durability
+                // Primary source: percent_sum_VOL_minute_120_buy (if provided by backend)
+                let volDur2h = getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
+                const volBuy2h = getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT', 'vol_buy_2jam');
+                const volSell2h = getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM', 'vol_sell_120MENIT', 'vol_sell_2jam');
+
+                // Fallback: if backend doesn't provide percent_sum_VOL_minute_120_buy, compute it from volBuy2h/(volBuy2h+volSell2h)
+                if ((!volDur2h || volDur2h === 0) && (volBuy2h || volSell2h)) {
+                    const total2h = (volBuy2h || 0) + (volSell2h || 0);
+                    volDur2h = total2h > 0 ? Math.round(((volBuy2h || 0) / total2h) * 100) : 0;
+                }
+
+                // Volume Ratio % (Buy vs Sell in 2h, scaled to 100)
+                const volumeRatio2h = volSell2h > 0 ? (volBuy2h / volSell2h) * 100 : (volBuy2h > 0 ? 999 : 0);
+                cell = row.insertCell(6);
+                cell.textContent = Math.round(volumeRatio2h) + '%';
+                cell.className = volumeRatio2h > 200 ? 'text-success fw-bold' : volumeRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
+
+                row.insertCell(7).textContent = volBuy2h;
+                row.insertCell(8).textContent = volSell2h;
+
+                cell = row.insertCell(9);
+                cell.textContent = (isNaN(volDur2h) ? 0 : volDur2h) + '%';
+                cell.className = getDurabilityClass(volDur2h);
+
+                // 24h volumes
+                row.insertCell(10).textContent = volBuy24h;
+                row.insertCell(11).textContent = volSell24h;
+
+                // Update time (handle seconds or milliseconds)
+                let ts = data.update_time || data.update_time_VOLCOIN || 0;
+                // if ts looks like milliseconds (>= 1e12) use directly, if seconds (<1e12) multiply
+                if (ts && ts < 1e12) ts = ts * 1000;
+                row.insertCell(12).textContent = ts ? new Date(ts).toLocaleString() : '-';
+
+                // Add per-timeframe recommendations to Recs tab (respect row limit)
+                if (recsBody) {
+                        // maximum number of rec rows requested by the user (rowLimit comes from `limitInput`)
+                        const requestedRecsLimit = isFinite(rowLimit) ? rowLimit : Infinity;
+                        // keep previous safety cap on coins processed for performance
+                        const perfCoinCap = 50;
+                        if (rowCount < perfCoinCap && !doneRecs) {
+                            const tfs = [
+                            {label: '1m', lookback: 60},
+                            {label: '5m', lookback: 5*60},
+                            {label: '10m', lookback: 10*60},
+                            {label: '30m', lookback: 30*60},
+                            {label: '60m', lookback: 60*60},
+                            {label: '120m', lookback: 120*60},
+                            {label: '24h', lookback: 24*60*60}
+                        ];
+                        for (const tf of tfs) {
+                            if (recsRowCount >= requestedRecsLimit) { doneRecs = true; break; }
+                            const priceNow = parseFloat(data.last) || 0;
+                            const pricePosTf = pricePosition;
+                            const recTf = calculateRecommendation(data, pricePosTf);
+                            const conf = (recTf.confidence || 0) / 100; // 0..1
+
+                            // sensitivity from UI (default 1)
+                            const sens = (confSensitivity && Number(confSensitivity.value)) || 1;
+
+                            // base TP/SL from UI
+                            const tpMin = tpMinInput ? Math.max(0, Number(tpMinInput.value) || 2) / 100 : 0.02;
+                            const tpMax = tpMaxInput ? Math.max(tpMin, Number(tpMaxInput.value) || 0.10) / 100 : 0.10;
+                            const slMax = slMaxInput ? Math.max(0, Number(slMaxInput.value) || 5) / 100 : 0.05;
+
+                            // determine rangeFactor either ATR-based or confidence-based
+                            let rangeFactor = Math.min(tpMax, tpMin + conf * (tpMax - tpMin) * sens);
+                            if (useAtrRecs && useAtrRecs.checked && data._history) {
+                                const atr = computeATR(data._history, 14);
+                                if (atr > 0 && priceNow > 0) {
+                                    // scale ATR relative to price, cap by tpMax
+                                    const atrPct = (atr / priceNow) * sens;
+                                    // choose a multiplier to make ATR produce reasonable TP range
+                                    rangeFactor = Math.min(tpMax, Math.max(tpMin, atrPct));
+                                }
+                            }
+
+                            let tp = '-';
+                            let sl = '-';
+                            if (priceNow > 0 && recTf.recommendation === 'BUY') {
+                                tp = (priceNow * (1 + rangeFactor)).toFixed(4);
+                                sl = (priceNow * (1 - Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
+                            } else if (priceNow > 0 && recTf.recommendation === 'SELL') {
+                                tp = (priceNow * (1 - rangeFactor)).toFixed(4);
+                                sl = (priceNow * (1 + Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
+                            }
+                            const r = recsBody.insertRow();
+                            r.insertCell(0).textContent = coin;
+                            r.insertCell(1).textContent = tf.label;
+                            r.insertCell(2).textContent = `${recTf.recommendation}`;
+                            r.insertCell(3).textContent = `${recTf.confidence || 0}%`;
+                            r.insertCell(4).textContent = priceNow || '-';
+                            r.insertCell(5).textContent = tp;
+                            r.insertCell(6).textContent = sl;
+                            recsRowCount++;
+                        }
+                        // if we've reached the requested recs limit, mark done
+                        if (recsRowCount >= requestedRecsLimit) doneRecs = true;
+                    }
+                }
+
+                // Continue to render other tables even if recs reached the requested limit
+                // Vol row (multiple timeframes)
+                row = volBody.insertRow();
+                row.insertCell(0).textContent = coin;
+                row.insertCell(1).textContent = volBuy1m;
+                row.insertCell(2).textContent = volSell1m;
+                row.insertCell(3).textContent = volBuy5m;
+                row.insertCell(4).textContent = volSell5m;
+                row.insertCell(5).textContent = volBuy10m;
+                row.insertCell(6).textContent = volSell10m;
+                // 15m
+                row.insertCell(7).textContent = getNumeric(data, 'count_VOL_minute_15_buy', 'vol_buy_15MENIT', 'vol_buy_15m');
+                row.insertCell(8).textContent = getNumeric(data, 'count_VOL_minute_15_sell', 'vol_sell_15MENIT', 'vol_sell_15m');
+                // 20m
+                row.insertCell(9).textContent = getNumeric(data, 'count_VOL_minute_20_buy', 'vol_buy_20MENIT', 'vol_buy_20m');
+                row.insertCell(10).textContent = getNumeric(data, 'count_VOL_minute_20_sell', 'vol_sell_20MENIT', 'vol_sell_20m');
+                // 30m
+                row.insertCell(11).textContent = getNumeric(data, 'count_VOL_minute_30_buy', 'vol_buy_30MENIT', 'vol_buy_30m');
+                row.insertCell(12).textContent = getNumeric(data, 'count_VOL_minute_30_sell', 'vol_sell_30MENIT', 'vol_sell_30m');
+                // 60m
+                row.insertCell(13).textContent = volBuy60m;
+                row.insertCell(14).textContent = volSell60m;
+                // 120m (2h)
+                row.insertCell(15).textContent = volBuy;
+                row.insertCell(16).textContent = volSell;
+
+                // Volume Ratio % for 2h timeframe
+                const volRatio2h = volSell > 0 ? (volBuy / volSell) * 100 : (volBuy > 0 ? 999 : 0);
+                cell = row.insertCell(17);
+                cell.textContent = Math.round(volRatio2h) + '%';
+                cell.className = volRatio2h > 200 ? 'text-success fw-bold' : volRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
+
+                // 24h volumes
+                row.insertCell(18).textContent = volBuy24h;
+                row.insertCell(19).textContent = volSell24h;
+                row.insertCell(20).textContent = (volBuy24h || 0) + (volSell24h || 0);
+
+                // Vol Durability row (1m/5m/10m/15m/20m/30m/1h/24h)
+                try {
+                    const vdr = volDurBody.insertRow();
+                    vdr.insertCell(0).textContent = coin;
+                    // helper to get percent durability or compute from buy/(buy+sell)
+                    function getDurPct(pctKey, buyKeys, sellKeys) {
+                        let p = getNumeric(data, pctKey);
+                        if (p && p > 0) return Math.round(p);
+                        const b = getNumeric(data, ...buyKeys);
+                        const s = getNumeric(data, ...sellKeys);
+                        const t = (b || 0) + (s || 0);
+                        return t > 0 ? Math.round((b / t) * 100) : 0;
+                    }
+
+                    const d1 = getDurPct('percent_sum_VOL_minute1_buy', ['count_VOL_minute1_buy','vol_buy_1MENIT','vol_buy_1m'], ['count_VOL_minute1_sell','vol_sell_1MENIT','vol_sell_1m']);
+                    const d5 = getDurPct('percent_sum_VOL_minute_5_buy', ['count_VOL_minute_5_buy','vol_buy_5MENIT','vol_buy_5m'], ['count_VOL_minute_5_sell','vol_sell_5MENIT','vol_sell_5m']);
+                    const d10 = getDurPct('percent_sum_VOL_minute_10_buy', ['count_VOL_minute_10_buy','vol_buy_10MENIT','vol_buy_10m'], ['count_VOL_minute_10_sell','vol_sell_10MENIT','vol_sell_10m']);
+                    const d15 = getDurPct('percent_sum_VOL_minute_15_buy', ['count_VOL_minute_15_buy','vol_buy_15MENIT','vol_buy_15m'], ['count_VOL_minute_15_sell','vol_sell_15MENIT','vol_sell_15m']);
+                    const d20 = getDurPct('percent_sum_VOL_minute_20_buy', ['count_VOL_minute_20_buy','vol_buy_20MENIT','vol_buy_20m'], ['count_VOL_minute_20_sell','vol_sell_20MENIT','vol_sell_20m']);
+                    const d30 = getDurPct('percent_sum_VOL_minute_30_buy', ['count_VOL_minute_30_buy','vol_buy_30MENIT','vol_buy_30m'], ['count_VOL_minute_30_sell','vol_sell_30MENIT','vol_sell_30m']);
+                    const d60 = getDurPct('percent_sum_VOL_minute_60_buy', ['count_VOL_minute_60_buy','vol_buy_1JAM','vol_buy_60MENIT'], ['count_VOL_minute_60_sell','vol_sell_1JAM','vol_sell_60MENIT']);
+                    const d24 = getDurPct('percent_sum_VOL_overall_buy', ['count_VOL_minute_1440_buy','vol_buy_24JAM','vol_buy_24h'], ['count_VOL_minute_1440_sell','vol_sell_24JAM','vol_sell_24h']);
+
+                    const cells = [d1,d5,d10,d15,d20,d30,d60,d24];
+                    for (const cval of cells) {
+                        const c = vdr.insertCell(-1);
+                        c.textContent = (isNaN(cval) ? 0 : cval) + '%';
+                        c.className = getDurabilityClass(cval);
+                    }
+                } catch (e) { console.warn('volDur row error', e); }
+
+                rowCount++;
+            }
+
+            // Render spike table sorted by ratio (descending)
+            if (spikeBody) {
+                // sort and optionally limit to rowLimit
+                spikeRows.sort((a,b) => b.ratio - a.ratio);
+                const maxSpikes = isFinite(rowLimit) ? rowLimit : spikeRows.length;
+                const showRows = spikeRows.slice(0, maxSpikes);
+                for (const s of showRows) {
+                    const r = spikeBody.insertRow();
+                    r.insertCell(0).textContent = s.coin;
+                    r.insertCell(1).textContent = s.timeframe;
+                    r.insertCell(2).textContent = s.vol;
+                    r.insertCell(3).textContent = s.avg;
+                    const cell = r.insertCell(4);
+                    cell.textContent = (s.ratio).toFixed(2) + 'x';
+                    cell.className = s.ratio >= 4 ? 'text-success fw-bold' : s.ratio >= 2 ? 'text-warning fw-bold' : '';
+                    const ts = s.update_time && s.update_time < 1e12 ? s.update_time * 1000 : s.update_time;
+                    r.insertCell(5).textContent = ts ? new Date(ts).toLocaleString() : '-';
+                }
+            }
+            // update Info tab (keeps runtime info current)
+            try { renderInfoTab(); } catch (e) { console.warn('renderInfoTab failed', e); }
+        }
+
+        // Populate the Info tab with runtime state and quick actions
+        function renderInfoTab() {
+            try {
+                const container = document.getElementById('info');
+                if (!container) return;
+                // Prefer a dedicated runtime container so we don't overwrite static Info content
+                let pane = document.getElementById('infoRuntime');
+                if (!pane) {
+                    pane = document.createElement('div');
+                    pane.id = 'infoRuntime';
+                    pane.className = 'mb-3';
+                    container.insertBefore(pane, container.firstElementChild);
+                }
+
+                // compute some runtime values
+                const wsStateMap = {0:'CONNECTING',1:'OPEN',2:'CLOSING',3:'CLOSED'};
+                const wsState = (typeof ws !== 'undefined' && ws && ws.readyState !== undefined) ? wsStateMap[ws.readyState] || ws.readyState : 'N/A';
+                const coinCount = Object.keys(coinDataMap || {}).length;
+                const alerts = loadAlertsFromStore();
+                const persistStore = (function(){ try { return JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}'); } catch(e){ return {}; } })();
+                const persistedCoins = Object.keys(persistStore || {}).length;
+                const lsKeys = Object.keys(localStorage).filter(k => k.toString().toLowerCase().indexOf('okx_calc')===0 || k.toString().toLowerCase().includes('okx'));
+
+                // find last update across coins
+                let lastTs = 0;
+                for (const c of Object.values(coinDataMap)) {
+                    try {
+                        if (c && c._history && c._history.length) {
+                            const t = c._history[c._history.length - 1].ts || 0;
+                            if (t > lastTs) lastTs = t;
+                        }
+                    } catch(e){}
+                }
+
+                const html = `
+                    <div class="card bg-dark text-light mb-2 p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">Runtime</h5>
+                                <div class="small text-muted">WebSocket: <strong>${wsState}</strong></div>
+                                <div class="small text-muted">Coins tracked: <strong>${coinCount}</strong></div>
+                                <div class="small text-muted">Last update: <strong>${lastTs?new Date(lastTs).toLocaleString():'-'}</strong></div>
+                            </div>
+                            <div class="text-end">
+                                <div class="small text-muted">Persist enabled: <strong>${persistHistoryEnabled ? 'Yes' : 'No'}</strong></div>
+                                <div class="small text-muted">Persisted coins: <strong>${persistedCoins}</strong></div>
+                                <div class="small text-muted">Stored alerts: <strong>${alerts.length}</strong></div>
+                            </div>
+                        </div>
+                        <hr/>
+                        <div class="d-flex gap-2 mt-2">
+                            <button id="exportPersistBtn" class="btn btn-sm btn-outline-primary">Export Persisted History</button>
+                            <button id="clearPersistBtn" class="btn btn-sm btn-outline-danger">Clear Persisted History</button>
+                            <button id="exportLSBtn" class="btn btn-sm btn-outline-secondary">Export okx_calc LocalStorage</button>
+                            <button id="clearLSBtn" class="btn btn-sm btn-outline-dark">Clear okx_calc LocalStorage</button>
+                        </div>
+                        <div class="mt-2 small text-muted">LocalStorage keys: <strong>${lsKeys.length}</strong> (showing keys starting with 'okx_calc' or containing 'okx')</div>
+                    </div>`;
+
+                pane.innerHTML = html;
+
+                // wire buttons
+                const expBtn = document.getElementById('exportPersistBtn');
+                const clrBtn = document.getElementById('clearPersistBtn');
+                const expLS = document.getElementById('exportLSBtn');
+                const clrLS = document.getElementById('clearLSBtn');
+
+                if (expBtn) expBtn.onclick = function() {
+                    try {
+                        const blob = new Blob([JSON.stringify(persistStore || {}, null, 2)], {type:'application/json'});
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = `persisted-history-${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                    } catch (e) { console.warn('exportPersist failed', e); showAlertBanner('Export failed', 'Could not export persisted history', 'danger', 4000); }
+                };
+
+                if (clrBtn) clrBtn.onclick = function() {
+                    try {
+                        if (!confirm('Clear all persisted history? This will remove per-coin stored histories.')) return;
+                        localStorage.setItem(PERSIST_KEY, JSON.stringify({}));
+                        showAlertBanner('Persist cleared', 'Persisted history removed', 'info', 3000);
+                    } catch (e) { console.warn('clearPersist failed', e); showAlertBanner('Clear failed','Could not clear persisted history','danger',4000); }
+                };
+
+                if (expLS) expLS.onclick = function() {
+                    try {
+                        const dump = {};
+                        for (const k of lsKeys) dump[k] = localStorage.getItem(k);
+                        const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = `okx-calc-localstorage-${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                    } catch (e) { console.warn('exportLS failed', e); showAlertBanner('Export failed','Could not export localStorage','danger',4000); }
+                };
+
+                if (clrLS) clrLS.onclick = function() {
+                    try {
+                        if (!confirm('Clear all okx_calc related LocalStorage keys?')) return;
+                        for (const k of lsKeys) localStorage.removeItem(k);
+                        showAlertBanner('LocalStorage cleared','Removed okx_calc keys', 'info', 3000);
+                        renderAlertsList();
+                    } catch (e) { console.warn('clearLS failed', e); showAlertBanner('Clear failed','Could not clear localStorage','danger',4000); }
+                };
+
+            } catch (e) { console.warn('renderInfoTab error', e); }
+        }
+
+        // Open info tab and scroll to Vol Ratio section
+        function showVolRatioInfo() {
+            try {
+                const tab = document.getElementById('info-tab');
+                if (tab) tab.click();
+                setTimeout(() => {
+                    const el = document.getElementById('volRatioSection');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // highlight briefly
+                        const orig = el.style.boxShadow;
+                        el.style.boxShadow = '0 0 12px rgba(255,235,59,0.9)';
+                        setTimeout(() => { el.style.boxShadow = orig; }, 1600);
+                    }
+                }, 180);
+            } catch (e) { console.warn('showVolRatioInfo failed', e); }
+        }
+    </script>
+
+    <!-- Hidden Alerts Modal -->
+    <div class="modal fade" id="hiddenAlertsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hidden Alerts</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="hiddenAlertsModalBody" style="max-height:60vh;overflow:auto;"></div>
+                <div class="modal-footer">
+                    <button type="button" id="restoreHiddenAsBanners" class="btn btn-sm btn-outline-primary">Show as banners</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Restore hidden alerts as banners when modal button clicked
+        try {
+            const restoreBtn = document.getElementById('restoreHiddenAsBanners');
+            if (restoreBtn) restoreBtn.addEventListener('click', () => {
+                try {
+                    const container = document.getElementById('alertBanner');
+                    if (!container) return;
+                    while (hiddenAlertBuffer && hiddenAlertBuffer.length) {
+                        const a = hiddenAlertBuffer.shift();
+                        try { showAlertBanner(a.title, a.message, a.type, 8000); } catch(e) { console.warn('restore show failed', e); }
+                    }
+                    // hide modal
+                    try { const bm = bootstrap.Modal.getInstance(document.getElementById('hiddenAlertsModal')); if (bm) bm.hide(); } catch(e){}
+                } catch(e) { console.warn('restoreHiddenAsBanners failed', e); }
+            });
+        } catch(e) { console.warn('wiring restore hidden alerts failed', e); }
+    </script>
+</body>
+
+</html>
+
+
