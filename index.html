@@ -243,6 +243,20 @@
             color: #475569;
             font-weight: 500;
         }
+        /* Disable movement/scale on hover for the summary table rows so they are easy to click */
+        #summaryBody tr:hover {
+            transform: none !important;
+            transition: background-color 0.12s ease !important;
+            box-shadow: none !important;
+        }
+        /* Force pointer events for summary table and ensure rows are above possible overlays */
+        #summaryBody, #summaryBody * {
+            pointer-events: auto !important;
+        }
+        #summaryBody tr {
+            position: relative;
+            z-index: 2;
+        }
     </style>
 </head>
 
@@ -283,16 +297,16 @@
             </div>
             <div class="col-md-4">
                 <label for="sortBy" class="form-label">📊 Sort By <span class="badge bg-success">NEW: Vol Ratio %</span></label>
-                <div class="form-text small text-muted">Note: feed no longer provides frequency fields — "Activity" sorts use volume as a proxy.</div>
+                <div class="form-text small text-muted">Note: feed no longer provides separate per-trade counts — "Activity" sorts use volume as a proxy.</div>
                 <select class="form-select" id="sortBy">
                     <optgroup label="📈 Durability">
                         <option value="vol_dur_2h">% Vol Durability (2h)</option>
-                        <option value="freq_dur_2h">% Activity Durability (2h, vol proxy)</option>
+                        <option value="activity_dur_2h">% Activity Durability (2h, vol proxy)</option>
                     </optgroup>
                     <optgroup label="💰 Price & Change">
                         <option value="change">% Change</option>
                         <option value="price">Price</option>
-                        <option value="price_position">Price Position (0-100)</option>
+                        <option value="price_position" selected>Price Position (0-100)</option>
                         <option value="recommendation">Recommendation Score</option>
                     </optgroup>
 
@@ -362,7 +376,7 @@
                         <option value="vol_buy_2h">Vol Buy (2h)</option>
                         <option value="vol_sell_2h">Vol Sell (2h)</option>
                         <option value="vol_total_2h">Vol Total (2h)</option>
-                        <option value="vol_ratio_2h" title="Volume Buy vs Sell Ratio in percentage (25% weight in recommendation)" selected>📊 Vol Ratio % (2h) - BUY/SELL Pressure ⭐</option>
+                        <option value="vol_ratio_2h" title="Volume Buy vs Sell Ratio in percentage (25% weight in recommendation)">📊 Vol Ratio % (2h) - BUY/SELL Pressure ⭐</option>
                         <option value="avg_vol_buy_2h">Avg Vol Buy (2h)</option>
                         <option value="avg_vol_sell_2h">Avg Vol Sell (2h)</option>
                     </optgroup>
@@ -393,7 +407,7 @@
                         <option disabled class="text-muted">Detailed change metrics not available from feed</option>
                     </optgroup>
                     <optgroup label="⏰ Update Times">
-                        <option value="update_freq">Update Time Freq</option>
+                        <option value="update_activity">Update Time Activity</option>
                         <option value="update_sum">Update Time Sum</option>
                         <option value="update_general">Update Time General</option>
                     </optgroup>
@@ -405,7 +419,7 @@
                         <option value="delay_ms">Delay MS</option>
                     </optgroup>
                     <optgroup label="🌟 Overall (24h)">
-                        <option value="freq_dur_24h">% Activity Durability (24h, vol proxy)</option>
+                        <option value="activity_dur_24h">% Activity Durability (24h, vol proxy)</option>
                         <option value="vol_dur_24h">% Vol Durability (24h)</option>
                         <option value="vol_buy_24h">Vol Buy (24h)</option>
                         <option value="vol_sell_24h">Vol Sell (24h)</option>
@@ -439,7 +453,6 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">📊 Summary</button>
             </li>
-            <!-- Frequency tab removed per user request -->
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="volume-tab" data-bs-toggle="tab" data-bs-target="#volume" type="button" role="tab">📊 Volume</button>
             </li>
@@ -484,7 +497,7 @@
                     <table class="table table-striped" id="summaryTable">
                         <thead>
                             <tr>
-                                <th>🪙 Coin</th>
+                                <th>Coin</th>
                                 <th>💰 Price</th>
                                 <th>📊 Change %</th>
                                 <th>📍 Price Pos</th>
@@ -505,14 +518,14 @@
                 </div>
             </div>
 
-            <!-- Frequency pane removed -->
+            <!-- Activity tab removed: feed only provides volume-based metrics now -->
 
             <div class="tab-pane fade" id="volume" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-striped" id="volTable">
                         <thead>
                             <tr>
-                                <th>🪙 Coin</th>
+                                <th>Coin</th>
                                 <th>📊 Buy 1m</th>
                                 <th>📊 Sell 1m</th>
                                 <th>📊 Buy 5m</th>
@@ -546,7 +559,7 @@
                     <table class="table table-striped" id="volDurTable">
                         <thead>
                             <tr>
-                                <th>🪙 Coin</th>
+                                <th>Coin</th>
                                 <th>1m</th>
                                 <th>5m</th>
                                 <th>10m</th>
@@ -577,6 +590,24 @@
 
             <div class="tab-pane fade" id="info" role="tabpanel">
                 <div id="infoRuntime" class="mb-3"></div>
+                <div class="card bg-dark text-light mb-3">
+                    <div class="card-body">
+                        <h5 class="text-info">✨ Fitur Tersedia / Available Features</h5>
+                        <ul class="small mb-2">
+                            <li><strong>Live feed:</strong> WebSocket client + Redis bridge (subscribe → wss) untuk data real-time.</li>
+                            <li><strong>Summary:</strong> Tabel ringkasan per-coin, klik baris untuk membuka Insight.</li>
+                            <li><strong>Recommendations (Recs):</strong> Per-timeframe (1m/5m/10m/30m/60m/120m/24h) dan opsi <em>All</em> (konsensus antar-timeframe).</li>
+                            <li><strong>TP/SL Controls:</strong> Atur TP% min/max, SL% max, dan sensitivitas; opsi ATR-based TP/SL tersedia.</li>
+                            <li><strong>Volume & Vol Dur:</strong> Lihat buy/sell volume multi-timeframe dan durability metrics.</li>
+                            <li><strong>Spike Detection:</strong> Deteksi lonjakan volume vs rata-rata per-timeframe.</li>
+                            <li><strong>Alerts:</strong> Banner alerts, webhook test, sound toggle, dan mode compact untuk membatasi tampilan.</li>
+                            <li><strong>Insight Export:</strong> Export data coin ke JSON/CSV dari modal Insight.</li>
+                            <li><strong>UI behavior:</strong> Debounced updates, delegated row clicks, and deterministic recommendations (sorting/preview do not mutate state).</li>
+                            <li><strong>Local Dev:</strong> Docker Compose included — runs Redis + example services (bridge/publisher/aggregator/count/generateavg). GenerateAvg scheduled in compose for periodic averages.</li>
+                        </ul>
+                        <p class="small text-muted mb-0">Tip singkat: gunakan tab <strong>Recs</strong> untuk memilih timeframe lalu periksa Summary agar nilainya konsisten. Untuk reproducibility, consider moving heavy analytics server-side.</p>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         <h4 class="text-info mb-3">📊 <strong>Summary Tab - Kolom Utama</strong></h4>
@@ -595,7 +626,7 @@
                                             <button id="showHiddenAlertsBtn" class="btn btn-sm btn-outline-secondary">Show hidden alerts</button>
                                         </div>
                                     </div>
-                                <h6 class="card-title text-warning">🪙 Coin</h6>
+                                <h6 class="card-title text-warning">Coin</h6>
                                 <p class="card-text small">Nama cryptocurrency (BTC, ETH, dll)</p>
 
                                 <h6 class="card-title text-warning">💰 Price</h6>
@@ -635,22 +666,6 @@
 
                 <div class="row mt-3">
                     <div class="col-md-6">
-                        <h4 class="text-info mb-3">📈 <strong>Frequency Tab</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <h6 class="card-title text-primary">📈 Buy/Sell 1m, 5m, 10m, 60m, 120m</h6>
-                                <p class="card-text small">Jumlah frekuensi pembelian/penjualan dalam timeframe tertentu</p>
-
-                                <h6 class="card-title text-primary">📊 Total</h6>
-                                <p class="card-text small">Total frekuensi trading (Buy + Sell)</p>
-
-                                <h6 class="card-title text-primary">📈 Avg Activity Buy/Sell</h6>
-                                <p class="card-text small">Rata-rata frekuensi trading per periode waktu</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
                         <h4 class="text-info mb-3">📊 <strong>Volume Tab</strong></h4>
                         <div class="card bg-dark text-light mb-3">
                             <div class="card-body">
@@ -679,7 +694,7 @@
                                             <li>Harga dekat level Low (Price Pos ≤33%)</li>
                                             <li>Momentum harga turun signifikan (<-5%)</li>
                                             <li>Volume Durability tinggi (≥67%)</li>
-                                            <li>Frequency Durability tinggi (≥67%)</li>
+                                            <li>Activity Durability tinggi (vol proxy) (≥67%)</li>
                                             <li><strong>Volume Buy 2x > Volume Sell (ratio >2.0)</strong></li>
                                         </ul>
                                     </div>
@@ -689,7 +704,7 @@
                                             <li>Harga dekat level High (Price Pos ≥67%)</li>
                                             <li>Momentum harga naik signifikan (>5%)</li>
                                             <li>Volume Durability rendah (≤33%)</li>
-                                            <li>Frequency Durability rendah (≤33%)</li>
+                                            <li>Activity Durability rendah (vol proxy) (≤33%)</li>
                                             <li><strong>Volume Sell 2x > Volume Buy (ratio <0.5)</strong></li>
                                         </ul>
                                     </div>
@@ -1085,7 +1100,7 @@
                     <table class="table table-striped" id="spikeTable">
                         <thead>
                             <tr>
-                                <th>🪙 Coin</th>
+                                <th>Coin</th>
                                 <th>⏱ Timeframe</th>
                                 <th>📊 Vol</th>
                                 <th>➗ Avg</th>
@@ -1100,6 +1115,19 @@
             <div class="tab-pane fade" id="recommendations" role="tabpanel">
                 <div class="mb-2">
                     <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="input-group input-group-sm" style="width:160px;">
+                            <span class="input-group-text">Timeframe</span>
+                            <select id="recTimeframe" class="form-select">
+                                <option value="All">All</option>
+                                <option value="1m">1m</option>
+                                <option value="5m">5m</option>
+                                <option value="10m">10m</option>
+                                <option value="30m">30m</option>
+                                <option value="60m">60m</option>
+                                <option value="120m">120m</option>
+                                <option value="24h">24h</option>
+                            </select>
+                        </div>
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="useAtrRecs">
                             <label class="form-check-label small text-muted" for="useAtrRecs">Use ATR-based TP/SL</label>
@@ -1123,7 +1151,7 @@
                     <table class="table table-striped" id="recsTable">
                         <thead>
                             <tr>
-                                <th>🪙 Coin</th>
+                                <th>Coin</th>
                                 <th>⏱ Timeframe</th>
                                 <th>🎯 Recommendation</th>
                                 <th>🔎 Confidence</th>
@@ -1168,6 +1196,22 @@
             recs: document.getElementById('coinFilter_recs'),
             alerts: document.getElementById('coinFilter_alerts')
         };
+
+        // Debounce helper to reduce DOM churn from frequent updates
+        function debounce(fn, wait) {
+            let t = null;
+            return function(...args) {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => { try { fn.apply(this, args); } catch(e){}; t = null; }, wait);
+            };
+        }
+
+        // Schedule updates to the table at most once per 150ms
+        // `updateTable` is defined later; debounce will call it when available.
+        const scheduleUpdateTable = debounce(function() {
+            try { if (typeof updateTable === 'function') updateTable(); }
+            catch(e) { /* ignore */ }
+        }, 150);
         let activeFilterTab = 'summary';
 
         function setActiveFilterTab(tab) {
@@ -1214,16 +1258,16 @@
         // Listen for changes to the limit
         limitInput.addEventListener('input', (event) => {
             rowLimit = parseInt(event.target.value, 10) || Infinity;
-            updateTable(); // Update table when limit changes
+            scheduleUpdateTable(); // Update table when limit changes (debounced)
         });
 
         // Wire recommendation controls to refresh table when changed
         try {
-            if (useAtrRecs) useAtrRecs.addEventListener('change', () => updateTable());
-            if (tpMinInput) tpMinInput.addEventListener('input', () => updateTable());
-            if (tpMaxInput) tpMaxInput.addEventListener('input', () => updateTable());
-            if (slMaxInput) slMaxInput.addEventListener('input', () => updateTable());
-            if (confSensitivity) confSensitivity.addEventListener('input', () => updateTable());
+            if (useAtrRecs) useAtrRecs.addEventListener('change', () => scheduleUpdateTable());
+            if (tpMinInput) tpMinInput.addEventListener('input', () => scheduleUpdateTable());
+            if (tpMaxInput) tpMaxInput.addEventListener('input', () => scheduleUpdateTable());
+            if (slMaxInput) slMaxInput.addEventListener('input', () => scheduleUpdateTable());
+            if (confSensitivity) confSensitivity.addEventListener('input', () => scheduleUpdateTable());
         } catch(e) { console.warn('wiring rec controls failed', e); }
 
         // Listen for changes in each per-tab filter input
@@ -1231,7 +1275,7 @@
             for (const k in filterInputs) {
                 const el = filterInputs[k];
                 if (!el) continue;
-                el.addEventListener('input', () => updateTable());
+                el.addEventListener('input', () => scheduleUpdateTable());
             }
         } catch(e) { console.warn('wiring per-tab filters failed', e); }
 
@@ -1289,18 +1333,19 @@
 
         // Listen for changes in sort criteria
         sortBySelect.addEventListener('change', () => {
-            updateTable(); // Update table when sort criteria is changed
+            scheduleUpdateTable(); // Update table when sort criteria is changed (debounced)
         });
 
         // Listen for changes in sort order (radio buttons)
         try {
-            for (const r of sortOrderRadios) { if (r) r.addEventListener('change', () => updateTable()); }
+            for (const r of sortOrderRadios) { if (r) r.addEventListener('change', () => scheduleUpdateTable()); }
         } catch(e) { console.warn('wiring sort order radios failed', e); }
 
         const summaryBody = document.getElementById('summaryBody');
         const volBody = document.getElementById('volBody');
         const spikeBody = document.getElementById('spikeBody');
         const recsBody = document.getElementById('recsBody');
+        const recTimeframeSelect = document.getElementById('recTimeframe');
         const openRecsBtn = document.getElementById('openRecsBtn');
 
         if (openRecsBtn) {
@@ -1308,7 +1353,37 @@
                 try { const tab = document.getElementById('recs-tab'); if (tab) tab.click(); } catch(e) { console.warn('openRecs click failed', e); }
             });
         }
-                const ws = new WebSocket('ws://ws-trade.nusantaracode.com:8089');
+        if (recTimeframeSelect) recTimeframeSelect.addEventListener('change', () => scheduleUpdateTable());
+                let ws = null;
+
+                // Attach handlers to a WebSocket instance by binding the named handlers
+                function attachHandlers(socket) {
+                    if (!socket) return;
+                    socket.onopen = onWsOpen;
+                    socket.onmessage = onWsMessage;
+                    socket.onclose = (ev) => { console.log('WebSocket closed', ev && ev.code); };
+                    socket.onerror = (err) => { console.error('WebSocket error', err); };
+                }
+
+                function createAndAttach() {
+                    try {
+                        if (ws) try { ws.close(); } catch(e){}
+                    } catch(e){}
+                    ws = new WebSocket('wss://eofficev2.bekasikota.go.id/okx-ws');
+                    attachHandlers(ws);
+                }
+
+                // create initial connection
+                createAndAttach();
+
+                // restart connection every 20 seconds
+                const RESTART_INTERVAL_MS = 20 * 1000;
+                setInterval(() => {
+                    try {
+                        console.log('Restarting WebSocket connection (interval)');
+                        createAndAttach();
+                    } catch (e) { console.warn('WebSocket restart failed', e); }
+                }, RESTART_INTERVAL_MS);
 
                 // --- Insight modal helpers (ensure global functions available) ---
                 function ensureInsightModal() {
@@ -1738,7 +1813,7 @@
                         const pricePos = priceRange > 0 ? Math.round(((currentPrice - lowPrice) / priceRange) * 100) : 50;
 
                         // recommendation breakdown
-                        const rec = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePos) : { recommendation: 'N/A', className: '', score:0, confidence:0 };
+                        const rec = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePos, null, false) : { recommendation: 'N/A', className: '', score:0, confidence:0 };
 
                         // timeframes to show
                         const tfs = [
@@ -1822,20 +1897,74 @@
                             const tabEl = document.getElementById('insight-tab');
                             if (tabEl) tabEl.click();
                         } catch (e) { console.warn('Could not activate insight tab', e); }
+
+                        // Also set the summary coin filter to this coin and refresh table
+                        try {
+                            const filterEl = document.getElementById('coinFilter_summary');
+                            if (filterEl) {
+                                filterEl.value = coin;
+                                // trigger input handlers (if any) and refresh table
+                                try { filterEl.dispatchEvent(new Event('input')); } catch(e){}
+                                try { if (typeof scheduleUpdateTable === 'function') scheduleUpdateTable(); } catch(e){}
+                            }
+                        } catch(e) { console.warn('Could not set summary filter for insight tab', e); }
                     } catch (e) { console.error('showInsightTab error', e); window.__displayError(e); }
                 };
 
         // Object to store data by coin
         const coinDataMap = {};
+
+        // Delegated click handler: ensure clicks anywhere in a summary row open the insight tab.
+        try {
+            const summaryBodyEl = document.getElementById('summaryBody');
+            if (summaryBodyEl) {
+                summaryBodyEl.addEventListener('click', (ev) => {
+                    try {
+                        const tr = ev.target.closest && ev.target.closest('tr');
+                        if (!tr) return;
+                        const coin = tr.dataset && tr.dataset.coin ? tr.dataset.coin : (tr.cells && tr.cells[0] ? tr.cells[0].textContent.trim() : null);
+                        if (!coin) return;
+                        const data = coinDataMap[coin] || null;
+                        // If data is present, show insight tab; otherwise try fallback
+                        showInsightTab(coin, data || {});
+                    } catch (e) { /* swallow */ }
+                }, { passive: true });
+            }
+        } catch (e) { console.warn('Delegated click wiring failed', e); }
+
+        // Lightweight debug click logger: when clicking inside the summary table area,
+        // log the actual event.target and the element at the click coordinates (elementFromPoint).
+        // This helps detect invisible overlays or other elements intercepting clicks.
+        try {
+            document.addEventListener('click', function _dbgClickLogger(ev) {
+                try {
+                    const summaryEl = document.getElementById('summaryBody');
+                    if (!summaryEl) return;
+                    const rect = summaryEl.getBoundingClientRect();
+                    // only log clicks that occur within the bounding box of the summary table
+                    if (ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+                        const target = ev.target;
+                        const atPoint = document.elementFromPoint(ev.clientX, ev.clientY);
+                        // Log useful identifying info
+                        console.log('[DBG_CLICK] client:', ev.clientX, ev.clientY, 'target:', target, 'tag:', target.tagName, 'classes:', target.className);
+                        console.log('[DBG_CLICK] elementFromPoint:', atPoint, 'tag:', atPoint && atPoint.tagName, 'classes:', atPoint && atPoint.className);
+                        // If elementFromPoint is not contained inside the summary table, warn
+                        if (atPoint && !summaryEl.contains(atPoint)) {
+                            console.warn('[DBG_CLICK] Click inside summary bounds but top element is outside summary — possible overlay blocking clicks', atPoint);
+                        }
+                    }
+                } catch (e) { /* swallow */ }
+            }, true);
+        } catch (e) { /* ignore in old browsers */ }
         // track which coins we've logged (to avoid noisy logs)
         const loggedCoins = new Set();
 
-        ws.onopen = () => {
+        function onWsOpen() {
             console.log("WebSocket connected.");
-            document.getElementById('loading').style.display = 'none';
-        };
+            try { const el = document.getElementById('loading'); if (el) el.style.display = 'none'; } catch(e){}
+        }
 
-        ws.onmessage = (event) => {
+        function onWsMessage(event) {
             const raw = JSON.parse(event.data);
             const coin = raw.coin; // Extract the coin from data
             if (!coin) return; // If there's no coin, skip
@@ -1844,16 +1973,6 @@
             if (!loggedCoins.has(coin)) {
                 try {
                     // console.log('[WS] Received keys for', coin, Object.keys(raw));
-                    // console.log('[WS] 24h candidates for', coin, {
-                    //     count_VOL_minute_1440_buy: raw.count_VOL_minute_1440_buy,
-                    //     count_VOL_minute_1440_sell: raw.count_VOL_minute_1440_sell,
-                    //     vol_buy_24JAM: raw.vol_buy_24JAM,
-                    //     vol_sell_24JAM: raw.vol_sell_24JAM,
-                    //     vol_buy_24jam: raw.vol_buy_24jam,
-                    //     vol_sell_24jam: raw.vol_sell_24jam,
-                    //     vol_buy_24h: raw.vol_buy_24h,
-                    //     vol_sell_24h: raw.vol_sell_24h
-                    // });
                 } catch (e) { console.error('Logging error', e); }
                 loggedCoins.add(coin);
             }
@@ -2074,11 +2193,10 @@
             // Store sanitized data by coin
             coinDataMap[coin] = data;
 
-            updateTable(); // Update table after receiving new data
+            scheduleUpdateTable(); // Update table after receiving new data (debounced)
         };
 
-        ws.onclose = () => console.log("WebSocket connection closed.");
-        ws.onerror = (error) => console.error("WebSocket error:", error);
+        // onclose/onerror are handled when a socket is (re)created via attachHandlers
 
         // Function to update table based on filter, row limit, and sort order
         // Helper: robust numeric getter (try multiple key variants and normalize strings)
@@ -2137,12 +2255,13 @@
             } catch (e) { return 0; }
         }
 
-        function calculateRecommendation(data, pricePosition) {
+        function calculateRecommendation(data, pricePosition, timeframe, applyState = false) {
             if (!data) {
                 return { recommendation: 'HOLD', confidence: 0, className: 'recommendation-hold', score: 0 };
             }
             // Extract analytics and fallbacks
             const a = data._analytics || {};
+            // Default 2h and 24h fields
             const volDur2h = a.volDurability2h_percent ?? getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
             const volDur24h = a.volDurability24h_percent ?? getNumeric(data, 'percent_sum_VOL_overall_buy', 'percent_vol_buy_24h');
             const volBuy2h = a.volBuy2h ?? getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT', 'vol_buy_2jam');
@@ -2153,12 +2272,35 @@
             const divergence = a.divergence ?? 0;
             const riskScore = a.riskScore ?? 0;
 
+            // If a specific timeframe is requested, override volume-based signals with that timeframe
+            let volDurTf = null, volBuyTf = null, volSellTf = null, zImbalanceTf = null;
+            try {
+                if (timeframe) {
+                    const map = {
+                        '1m':  { volKey: 'percent_sum_VOL_minute1_buy', buyKey: 'count_VOL_minute1_buy', sellKey: 'count_VOL_minute1_sell' },
+                        '5m':  { volKey: 'percent_sum_VOL_minute_5_buy', buyKey: 'count_VOL_minute_5_buy', sellKey: 'count_VOL_minute_5_sell' },
+                        '10m': { volKey: 'percent_sum_VOL_minute_10_buy', buyKey: 'count_VOL_minute_10_buy', sellKey: 'count_VOL_minute_10_sell' },
+                        '30m': { volKey: 'percent_sum_VOL_minute_30_buy', buyKey: 'count_VOL_minute_30_buy', sellKey: 'count_VOL_minute_30_sell' },
+                        '60m': { volKey: 'percent_sum_VOL_minute_60_buy', buyKey: 'count_VOL_minute_60_buy', sellKey: 'count_VOL_minute_60_sell' },
+                        '120m':{ volKey: 'percent_sum_VOL_minute_120_buy', buyKey: 'count_VOL_minute_120_buy', sellKey: 'count_VOL_minute_120_sell' },
+                        '24h': { volKey: 'percent_sum_VOL_overall_buy', buyKey: 'count_VOL_minute_1440_buy', sellKey: 'count_VOL_minute_1440_sell' }
+                    };
+                    const info = map[String(timeframe)] || null;
+                    if (info) {
+                        volBuyTf = getNumeric(data, info.buyKey) || 0;
+                        volSellTf = getNumeric(data, info.sellKey) || 0;
+                        volDurTf = getNumeric(data, info.volKey) || (volBuyTf + volSellTf > 0 ? Math.round((volBuyTf / (volBuyTf + volSellTf)) * 100) : null);
+                        zImbalanceTf = _tanh(((volBuyTf || 0) - (volSellTf || 0)) / Math.max((volBuyTf || 0) + (volSellTf || 0), 1));
+                    }
+                }
+            } catch (e) { /* ignore timeframe mapping errors */ }
+
             // Normalized feature construction (all in [-1,1])
             const priceBias = (50 - (Number(pricePosition) || 50)) / 50; // 1 => strong buy bias, -1 => strong sell bias
-            const volDurNorm = ((Number(volDur2h) || 50) - 50) / 50; // positive => buy-dominant
+            const volDurNorm = ((Number(volDurTf != null ? volDurTf : volDur2h) || 50) - 50) / 50; // positive => buy-dominant
             const vol24Norm = ((Number(volDur24h) || 50) - 50) / 50;
             // Use z-scores when available; map to [-1,1] via tanh scaling
-            const zImbalance = _tanh((Number(zBuy) - Number(zSell)) / 3); // >0 => buy pressure
+            const zImbalance = (zImbalanceTf != null) ? zImbalanceTf : _tanh((Number(zBuy) - Number(zSell)) / 3); // >0 => buy pressure
             const persistenceNorm = ((Number(persistenceBuy3) || 0) - 1.5) / 1.5; // approx -1..1
             const divergenceNorm = Math.max(-1, Math.min(1, (Number(divergence) || 0) / 10));
             const riskPenalty = Math.max(0, Math.min(1, (Number(riskScore) || 0) / 100));
@@ -2192,28 +2334,29 @@
             if (score >= RECOMMENDATION_THRESHOLD) recommendation = 'BUY';
             else if (score <= -RECOMMENDATION_THRESHOLD) recommendation = 'SELL';
 
-            // Per-coin cooldown to avoid flip-flopping
+            // Per-coin cooldown and logging are optional side-effects triggered only when applyState===true
             const coin = data.coin || data.symbol || data.code || 'unknown';
-            const now = Date.now();
-            const last = recommendationCooldowns[coin] || { ts: 0, rec: null };
-            if (now - last.ts < RECOMMENDATION_COOLDOWN_MS && last.rec && last.rec !== recommendation) {
-                // During cooldown prefer HOLD rather than flip
-                recommendation = 'HOLD';
-            }
-            // Save cooldown info (if recommendation is non-HOLD, update timestamp and rec)
-            if (recommendation !== 'HOLD') {
-                recommendationCooldowns[coin] = { ts: now, rec: recommendation };
-            } else if (!recommendationCooldowns[coin]) {
-                recommendationCooldowns[coin] = { ts: 0, rec: null };
-            }
-
-            // Class name for styling
             const className = recommendation === 'BUY' ? 'recommendation-buy' : (recommendation === 'SELL' ? 'recommendation-sell' : 'recommendation-hold');
 
-            // Append to lightweight recommendation log on the data analytics object for later backtesting
-            a.recommendationLog = a.recommendationLog || [];
-            a.recommendationLog.push({ ts: now, coin, score, recommendation, confidence, priceBias, volDurNorm, zImbalance, persistenceNorm, divergenceNorm, riskScore });
-            if (a.recommendationLog.length > 200) a.recommendationLog.shift();
+            if (applyState) {
+                const now = Date.now();
+                const last = recommendationCooldowns[coin] || { ts: 0, rec: null };
+                if (now - last.ts < RECOMMENDATION_COOLDOWN_MS && last.rec && last.rec !== recommendation) {
+                    // During cooldown prefer HOLD rather than flip
+                    recommendation = 'HOLD';
+                }
+                // Save cooldown info (if recommendation is non-HOLD, update timestamp and rec)
+                if (recommendation !== 'HOLD') {
+                    recommendationCooldowns[coin] = { ts: now, rec: recommendation };
+                } else if (!recommendationCooldowns[coin]) {
+                    recommendationCooldowns[coin] = { ts: 0, rec: null };
+                }
+
+                // Append to lightweight recommendation log on the data analytics object for later backtesting
+                a.recommendationLog = a.recommendationLog || [];
+                a.recommendationLog.push({ ts: now, coin, score, recommendation, confidence, priceBias, volDur: volDurTf != null ? volDurTf : volDur2h, volBuyTf, volSellTf, zImbalance, persistenceNorm, divergenceNorm, riskScore });
+                if (a.recommendationLog.length > 200) a.recommendationLog.shift();
+            }
 
             return { recommendation, confidence, className, score };
         }
@@ -2221,7 +2364,7 @@
         // Quick sort function for popular metrics
         function quickSort(criteria) {
             document.getElementById('sortBy').value = criteria;
-            updateTable();
+            scheduleUpdateTable();
             
             // Show success message using Alerts tab banner instead of SweetAlert
             try {
@@ -2308,7 +2451,7 @@
                     // Durability
                     case 'vol_dur_2h':
                         return parseFloat(data.percent_sum_VOL_minute_120_buy) || 0;
-                    case 'freq_dur_2h':
+                    case 'activity_dur_2h':
                         return getNumeric(data, 'sum_minute_120_buy', 'count_VOL_minute_120_buy') || 0;
 
                     // Price & Change
@@ -2325,7 +2468,7 @@
                     case 'recommendation':
                         try {
                             if (typeof calculateRecommendation === 'function') {
-                                const rec = calculateRecommendation(data, 50); // Use 50 as default price position for sorting
+                                const rec = calculateRecommendation(data, 50, null, false); // Use pure mode for sorting
                                 return rec && typeof rec.score === 'number' ? rec.score : 0; // Positive = Buy bias, Negative = Sell bias
                             }
                         } catch (err) {
@@ -2455,7 +2598,7 @@
                         return parseFloat(data.avg_VOLCOIN_sell_1MENIT) || 0;
 
                     // Overall 24h
-                    case 'freq_dur_24h':
+                    case 'activity_dur_24h':
                         return parseFloat(data.sum_overall_buy) || 0;
                     case 'vol_dur_24h':
                         return parseFloat(data.percent_sum_VOL_overall_buy) || 0;
@@ -2534,7 +2677,7 @@
                         return Number(pct) || 0;
 
                     // Update Times (note: per-volume update_time fields are not used as a sorting/reference metric)
-                    case 'update_freq':
+                    case 'update_activity':
                         return parseFloat(data.update_time_FREQ) || 0;
                     case 'update_sum':
                         return parseFloat(data.sum_update_time) || 0;
@@ -2581,10 +2724,7 @@
                 const coin = coinKey;
                 const price = (data.last || 0).toFixed(4);
                 const change = data.percent_change || 0;
-                const freqDur = data.sum_minute_120_buy || 0;
                 const volDur = getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min');
-                const freqBuy = getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM') || 0;
-                const freqSell = getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM') || 0;
                 const volBuy = getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT');
                 const volSell = getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM', 'vol_sell_120MENIT');
 
@@ -2593,14 +2733,7 @@
                 const volSell24h = getNumeric(data, 'count_VOL_minute_1440_sell', 'vol_sell_24JAM', 'vol_sell_24jam', 'vol_sell_24h', 'vol_sell_24H');
 
                 // Additional data for multiple timeframes
-                const freqBuy1m = getNumeric(data, 'count_VOL_minute1_buy', 'vol_buy_1MENIT', 'vol_buy_1m') || 0;
-                const freqSell1m = getNumeric(data, 'count_VOL_minute1_sell', 'vol_sell_1MENIT', 'vol_sell_1m') || 0;
-                const freqBuy5m = getNumeric(data, 'count_VOL_minute_5_buy', 'vol_buy_5MENIT', 'vol_buy_5m') || 0;
-                const freqSell5m = getNumeric(data, 'count_VOL_minute_5_sell', 'vol_sell_5MENIT', 'vol_sell_5m') || 0;
-                const freqBuy10m = getNumeric(data, 'count_VOL_minute_10_buy', 'vol_buy_10MENIT', 'vol_buy_10m') || 0;
-                const freqSell10m = getNumeric(data, 'count_VOL_minute_10_sell', 'vol_sell_10MENIT', 'vol_sell_10m') || 0;
-                const freqBuy60m = getNumeric(data, 'count_VOL_minute_60_buy', 'vol_buy_1JAM', 'vol_buy_60MENIT') || 0;
-                const freqSell60m = getNumeric(data, 'count_VOL_minute_60_sell', 'vol_sell_1JAM', 'vol_sell_60MENIT') || 0;
+                // activity counts removed upstream; use volume fields below
 
                 const volBuy1m = getNumeric(data, 'count_VOL_minute1_buy', 'vol_buy_1MENIT', 'vol_buy_1menit', 'vol_buy_1m', 'vol_buy_1min');
                 const volSell1m = getNumeric(data, 'count_VOL_minute1_sell', 'vol_sell_1MENIT', 'vol_sell_1menit', 'vol_sell_1m', 'vol_sell_1min');
@@ -2642,14 +2775,18 @@
                     return 'durability-poor';                       // Bottom 1/3: 0-33
                 }
 
-                // Summary row (compact)
+                // Summary row (compact) — make the entire row clickable for insights
                 let row = summaryBody.insertRow();
+                row.classList.add('summary-row');
+                row.style.cursor = 'pointer';
+                // store coin on the row for delegated clicks
+                row.dataset.coin = coin;
+                // Clicking anywhere on the row will open insights for the coin (delegation also set up)
+                row.onclick = () => showInsightTab(coin, data);
                 const coinCell = row.insertCell(0);
                 coinCell.textContent = coin;
-                coinCell.style.cursor = 'pointer';
                 coinCell.className = 'text-primary';
                 coinCell.title = 'Click for insights';
-                coinCell.onclick = () => showInsightTab(coin, data);
                 row.insertCell(1).textContent = price;
                 let cell = row.insertCell(2);
                 cell.textContent = change + '%';
@@ -2666,7 +2803,8 @@
                 cell.className = getDurabilityClass(pricePosition);
 
                 // Recommendation Algorithm
-                const recommendation = calculateRecommendation(data, pricePosition);
+                const selectedTf = (typeof recTimeframeSelect !== 'undefined' && recTimeframeSelect && recTimeframeSelect.value) ? recTimeframeSelect.value : '120m';
+                const recommendation = calculateRecommendation(data, pricePosition, selectedTf, true);
                 cell = row.insertCell(4);
                 cell.textContent = recommendation && recommendation.recommendation ? `${recommendation.recommendation} (${recommendation.confidence || 0}%)` : 'HOLD';
                 cell.className = recommendation && recommendation.className ? recommendation.className : 'recommendation-hold';
@@ -2720,66 +2858,119 @@
                         const perfCoinCap = 50;
                         if (rowCount < perfCoinCap && !doneRecs) {
                             const tfs = [
-                            {label: '1m', lookback: 60},
-                            {label: '5m', lookback: 5*60},
-                            {label: '10m', lookback: 10*60},
-                            {label: '30m', lookback: 30*60},
-                            {label: '60m', lookback: 60*60},
-                            {label: '120m', lookback: 120*60},
-                            {label: '24h', lookback: 24*60*60}
-                        ];
-                        for (const tf of tfs) {
-                            if (recsRowCount >= requestedRecsLimit) { doneRecs = true; break; }
-                            const priceNow = parseFloat(data.last) || 0;
-                            const pricePosTf = pricePosition;
-                            const recTf = calculateRecommendation(data, pricePosTf);
-                            const conf = (recTf.confidence || 0) / 100; // 0..1
+                                {label: '1m', lookback: 60},
+                                {label: '5m', lookback: 5*60},
+                                {label: '10m', lookback: 10*60},
+                                {label: '30m', lookback: 30*60},
+                                {label: '60m', lookback: 60*60},
+                                {label: '120m', lookback: 120*60},
+                                {label: '24h', lookback: 24*60*60}
+                            ];
 
-                            // sensitivity from UI (default 1)
-                            const sens = (confSensitivity && Number(confSensitivity.value)) || 1;
+                            const selectedTf = (typeof recTimeframeSelect !== 'undefined' && recTimeframeSelect && recTimeframeSelect.value) ? recTimeframeSelect.value : 'All';
 
-                            // base TP/SL from UI
-                            const tpMin = tpMinInput ? Math.max(0, Number(tpMinInput.value) || 2) / 100 : 0.02;
-                            const tpMax = tpMaxInput ? Math.max(tpMin, Number(tpMaxInput.value) || 0.10) / 100 : 0.10;
-                            const slMax = slMaxInput ? Math.max(0, Number(slMaxInput.value) || 5) / 100 : 0.05;
+                            // If 'All' is selected, aggregate scores across timeframes and emit one row per coin
+                            if (selectedTf === 'All') {
+                                if (recsRowCount < requestedRecsLimit) {
+                                    const priceNow = parseFloat(data.last) || 0;
+                                    const pricePosTf = pricePosition;
+                                    // Aggregate weighted score by confidence
+                                    let sumWeighted = 0, sumWeight = 0;
+                                    for (const tf of tfs) {
+                                        const recTf = calculateRecommendation(data, pricePosTf, tf.label, false);
+                                        const w = (recTf.confidence || 0) / 100;
+                                        sumWeighted += (recTf.score || 0) * w;
+                                        sumWeight += w;
+                                    }
+                                    const aggScore = sumWeight ? (sumWeighted / sumWeight) : 0;
+                                    const aggConfidence = Math.round(Math.min(100, Math.abs(aggScore) * 100));
+                                    let aggRecLabel = 'HOLD';
+                                    if (aggScore >= RECOMMENDATION_THRESHOLD) aggRecLabel = 'BUY';
+                                    else if (aggScore <= -RECOMMENDATION_THRESHOLD) aggRecLabel = 'SELL';
 
-                            // determine rangeFactor either ATR-based or confidence-based
-                            let rangeFactor = Math.min(tpMax, tpMin + conf * (tpMax - tpMin) * sens);
-                            if (useAtrRecs && useAtrRecs.checked && data._history) {
-                                const atr = computeATR(data._history, 14);
-                                if (atr > 0 && priceNow > 0) {
-                                    // scale ATR relative to price, cap by tpMax
-                                    const atrPct = (atr / priceNow) * sens;
-                                    // choose a multiplier to make ATR produce reasonable TP range
-                                    rangeFactor = Math.min(tpMax, Math.max(tpMin, atrPct));
+                                    // sensitivity from UI (default 1)
+                                    const sens = (confSensitivity && Number(confSensitivity.value)) || 1;
+                                    const tpMin = tpMinInput ? Math.max(0, Number(tpMinInput.value) || 2) / 100 : 0.02;
+                                    const tpMax = tpMaxInput ? Math.max(tpMin, Number(tpMaxInput.value) || 0.10) / 100 : 0.10;
+                                    const slMax = slMaxInput ? Math.max(0, Number(slMaxInput.value) || 5) / 100 : 0.05;
+                                    let rangeFactor = Math.min(tpMax, tpMin + (aggConfidence/100) * (tpMax - tpMin) * sens);
+                                    if (useAtrRecs && useAtrRecs.checked && data._history) {
+                                        const atr = computeATR(data._history, 14);
+                                        if (atr > 0 && priceNow > 0) {
+                                            const atrPct = (atr / priceNow) * sens;
+                                            rangeFactor = Math.min(tpMax, Math.max(tpMin, atrPct));
+                                        }
+                                    }
+                                    let tp = '-', sl = '-';
+                                    if (priceNow > 0 && aggRecLabel === 'BUY') {
+                                        tp = (priceNow * (1 + rangeFactor)).toFixed(4);
+                                        sl = (priceNow * (1 - Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
+                                    } else if (priceNow > 0 && aggRecLabel === 'SELL') {
+                                        tp = (priceNow * (1 - rangeFactor)).toFixed(4);
+                                        sl = (priceNow * (1 + Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
+                                    }
+                                    const r = recsBody.insertRow();
+                                    r.insertCell(0).textContent = coin;
+                                    r.insertCell(1).textContent = 'All';
+                                    r.insertCell(2).textContent = `${aggRecLabel}`;
+                                    r.insertCell(3).textContent = `${aggConfidence || 0}%`;
+                                    r.insertCell(4).textContent = priceNow || '-';
+                                    r.insertCell(5).textContent = tp;
+                                    r.insertCell(6).textContent = sl;
+                                    recsRowCount++;
+                                }
+                            } else {
+                                // Single timeframe selected: show per-coin recommendation for that timeframe
+                                if (recsRowCount < requestedRecsLimit) {
+                                    const priceNow = parseFloat(data.last) || 0;
+                                    const pricePosTf = pricePosition;
+                                    const recTf = calculateRecommendation(data, pricePosTf, selectedTf, true);
+                                    const conf = (recTf.confidence || 0) / 100; // 0..1
+
+                                    // sensitivity from UI (default 1)
+                                    const sens = (confSensitivity && Number(confSensitivity.value)) || 1;
+
+                                    // base TP/SL from UI
+                                    const tpMin = tpMinInput ? Math.max(0, Number(tpMinInput.value) || 2) / 100 : 0.02;
+                                    const tpMax = tpMaxInput ? Math.max(tpMin, Number(tpMaxInput.value) || 0.10) / 100 : 0.10;
+                                    const slMax = slMaxInput ? Math.max(0, Number(slMaxInput.value) || 5) / 100 : 0.05;
+
+                                    // determine rangeFactor either ATR-based or confidence-based
+                                    let rangeFactor = Math.min(tpMax, tpMin + conf * (tpMax - tpMin) * sens);
+                                    if (useAtrRecs && useAtrRecs.checked && data._history) {
+                                        const atr = computeATR(data._history, 14);
+                                        if (atr > 0 && priceNow > 0) {
+                                            const atrPct = (atr / priceNow) * sens;
+                                            rangeFactor = Math.min(tpMax, Math.max(tpMin, atrPct));
+                                        }
+                                    }
+
+                                    let tp = '-';
+                                    let sl = '-';
+                                    if (priceNow > 0 && recTf.recommendation === 'BUY') {
+                                        tp = (priceNow * (1 + rangeFactor)).toFixed(4);
+                                        sl = (priceNow * (1 - Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
+                                    } else if (priceNow > 0 && recTf.recommendation === 'SELL') {
+                                        tp = (priceNow * (1 - rangeFactor)).toFixed(4);
+                                        sl = (priceNow * (1 + Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
+                                    }
+                                    const r = recsBody.insertRow();
+                                    r.insertCell(0).textContent = coin;
+                                    r.insertCell(1).textContent = selectedTf;
+                                    r.insertCell(2).textContent = `${recTf.recommendation}`;
+                                    r.insertCell(3).textContent = `${recTf.confidence || 0}%`;
+                                    r.insertCell(4).textContent = priceNow || '-';
+                                    r.insertCell(5).textContent = tp;
+                                    r.insertCell(6).textContent = sl;
+                                    recsRowCount++;
                                 }
                             }
-
-                            let tp = '-';
-                            let sl = '-';
-                            if (priceNow > 0 && recTf.recommendation === 'BUY') {
-                                tp = (priceNow * (1 + rangeFactor)).toFixed(4);
-                                sl = (priceNow * (1 - Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
-                            } else if (priceNow > 0 && recTf.recommendation === 'SELL') {
-                                tp = (priceNow * (1 - rangeFactor)).toFixed(4);
-                                sl = (priceNow * (1 + Math.min(slMax, Math.max(0.005, rangeFactor/2)))).toFixed(4);
-                            }
-                            const r = recsBody.insertRow();
-                            r.insertCell(0).textContent = coin;
-                            r.insertCell(1).textContent = tf.label;
-                            r.insertCell(2).textContent = `${recTf.recommendation}`;
-                            r.insertCell(3).textContent = `${recTf.confidence || 0}%`;
-                            r.insertCell(4).textContent = priceNow || '-';
-                            r.insertCell(5).textContent = tp;
-                            r.insertCell(6).textContent = sl;
-                            recsRowCount++;
                         }
-                        // if we've reached the requested recs limit, mark done
-                        if (recsRowCount >= requestedRecsLimit) doneRecs = true;
-                    }
                 }
 
                 // Continue to render other tables even if recs reached the requested limit
+                // Activity rows removed — feed provides only volume-based metrics now
+
                 // Vol row (multiple timeframes)
                 row = volBody.insertRow();
                 row.insertCell(0).textContent = coin;
@@ -2891,6 +3082,7 @@
                 const wsStateMap = {0:'CONNECTING',1:'OPEN',2:'CLOSING',3:'CLOSED'};
                 const wsState = (typeof ws !== 'undefined' && ws && ws.readyState !== undefined) ? wsStateMap[ws.readyState] || ws.readyState : 'N/A';
                 const coinCount = Object.keys(coinDataMap || {}).length;
+                // Activity fields intentionally removed upstream — dashboard uses volume-only metrics
                 const alerts = loadAlertsFromStore();
                 const persistStore = (function(){ try { return JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}'); } catch(e){ return {}; } })();
                 const persistedCoins = Object.keys(persistStore || {}).length;
@@ -2933,6 +3125,8 @@
                     </div>`;
 
                 pane.innerHTML = html;
+
+                // No activity tab logic required — using volume-only metrics
 
                 // wire buttons
                 const expBtn = document.getElementById('exportPersistBtn');
