@@ -8,7 +8,7 @@
     'use strict';
 
     window.INFO_DOCS = {
-        version: '2.0.0',
+        version: '2.1.0',
         lastUpdated: '2025-12-11',
         
         // ===================== Available Features =====================
@@ -24,6 +24,54 @@
             { name: 'Advanced Sort', icon: '🔀', desc: 'Multi-criteria sorting dengan filter min/max dan durability threshold.' },
             { name: 'Export/Import', icon: '📦', desc: 'Export history, alerts, dan settings ke JSON. Import via Run JSON.' }
         ],
+
+        // Additional feature details (implementation notes)
+        details: {
+            tpSlControls: {
+                title: 'TP/SL Controls',
+                desc: 'Take-Profit / Stop-Loss controls let users set global and per-coin TP% min/max, SL% max, and sensitivity sliders. Supports ATR-based TP/SL calculation and an optional adaptive mode that widens TP/SL in volatile markets. Settings persist to localStorage and are included in exported JSON.'
+            },
+            insightExport: {
+                title: 'Insight Export / Import',
+                desc: 'Export a coin Insight (historical points, analytics snapshot, and metadata) to JSON or CSV. Import supports restoring previously exported snapshots via the Run JSON modal. Exports include timestamps and version metadata to ensure compatibility.'
+            },
+            webhookTest: {
+                title: 'Webhook Test',
+                desc: 'Alerts system supports webhook endpoints. The webhook test sends a representative payload (coin, metric, recommendation) allowing remote integrations (e.g., automations, notification bridges). Failures will be surfaced to the Alerts UI.'
+            },
+            soundToggle: {
+                title: 'Sound Toggle',
+                desc: 'Per-alert sound toggle and master mute. Sounds are non-blocking and respect browser autoplay policies; first interaction enables audio playback. Sound preferences persist in settings.'
+            },
+            compactAlerts: {
+                title: 'Compact Alerts Mode',
+                desc: 'Compact mode limits visible banner alerts and moves older alerts into a hidden list accessible via "Show hidden". This reduces UI noise during high-volume periods while maintaining an alert history buffer.'
+            },
+            debouncedUpdates: {
+                title: 'UI Throttling / Debounce',
+                desc: 'DOM updates are debounced (default 300ms) for heavy views to avoid layout thrashing. Microstructure tab uses a separate throttle (1s) to balance freshness vs CPU usage.'
+            },
+            cloneBeforeWorker: {
+                title: 'Clone Before Worker',
+                desc: 'Data sent to the worker pool is cloned (via structuredClone where available, otherwise JSON clone) to avoid race conditions between WebSocket updates and worker computation. This prevents mutated shared state and ensures deterministic worker inputs.'
+            },
+            websocketHeartbeat: {
+                title: 'WebSocket Heartbeat',
+                desc: 'The client sends periodic pings and expects pongs; heartbeat thresholds categorize status into Healthy/Delayed/Stale and drive reconnect/backoff logic. Heartbeat timestamp is surfaced in the Info tab.'
+            },
+            alertBufferLimit: {
+                title: 'Alert Buffer Limit',
+                desc: 'Banner alerts are capped (default max 200) to avoid memory blow-up. Older alerts roll into a persisted history that can be exported or pruned.'
+            },
+            createAndAttachCleanup: {
+                title: 'createAndAttach Cleanup',
+                desc: 'UI components created dynamically register a cleanup function that detaches listeners and removes DOM nodes to prevent memory leaks when tabs are re-rendered or destroyed.'
+            },
+            deterministicRecommendations: {
+                title: 'Deterministic Recommendations',
+                desc: 'Recommendation computation is pure and side-effect-free: sorting or preview UI operations do not mutate underlying state used to compute recommendations, improving reproducibility across reloads.'
+            }
+        },
 
         // ===================== Summary Tab Columns =====================
         summaryColumns: [
