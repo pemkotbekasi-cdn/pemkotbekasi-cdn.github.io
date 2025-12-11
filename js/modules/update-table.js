@@ -11,6 +11,7 @@
 
     // ===================== DOM refs (will be cached on first call) =====================
     let summaryBody, volBody, volRatioBody, spikeBody, recsBody, microBody;
+    let freqBody, freqRatioBody, smartBody; // New tabs
     let sortBySelect, recTimeframeSelect;
     let useAtrRecs, tpMinInput, tpMaxInput, slMaxInput, confSensitivity;
 
@@ -22,6 +23,9 @@
         spikeBody = document.getElementById('spikeBody');
         recsBody = document.getElementById('recsBody');
         microBody = document.getElementById('microBody');
+        freqBody = document.getElementById('freqBody');
+        freqRatioBody = document.getElementById('freqRatioBody');
+        smartBody = document.getElementById('smartBody');
         sortBySelect = document.getElementById('sortBy');
         recTimeframeSelect = document.getElementById('recTimeframe');
         useAtrRecs = document.getElementById('useAtrRecs');
@@ -94,7 +98,9 @@
 
     function parseLookbackMs(name) {
         try {
-            const re = /(\d+)(sec|min|jam|hour|m)/ig;
+            // Use explicit units with priority: longer matches first to avoid ambiguity
+            // Order: second|sec|s, minute|min|menit, hour|jam|h, m (fallback for minutes)
+            const re = /(\d+)\s*(second|sec|s|minute|menit|min|hour|jam|h|m)(?![a-z])/ig;
             let match, lastMatch = null;
             while ((match = re.exec(name)) !== null) { lastMatch = match; }
             if (!lastMatch) {
@@ -104,9 +110,11 @@
             }
             const val = Number(lastMatch[1]);
             const unit = (lastMatch[2] || '').toLowerCase();
-            if (unit.startsWith('sec')) return val * 1000;
-            if (unit === 'min' || unit === 'm') return val * 60 * 1000;
-            if (unit === 'jam' || unit.startsWith('hour')) return val * 60 * 60 * 1000;
+            // Seconds: second, sec, s
+            if (unit === 'second' || unit === 'sec' || unit === 's') return val * 1000;
+            // Hours: hour, jam, h
+            if (unit === 'hour' || unit === 'jam' || unit === 'h') return val * 60 * 60 * 1000;
+            // Minutes: minute, menit, min, m (default)
             return val * 60 * 1000;
         } catch (e) { return null; }
     }
@@ -123,8 +131,12 @@
         let sell = normalize(getNumeric(data, ...sellAliasesArr));
         if (buy === 0 && analyticsBuyKey) buy = normalize(analytics[analyticsBuyKey]);
         if (sell === 0 && analyticsSellKey) sell = normalize(analytics[analyticsSellKey]);
+        // Use centralized calculateVolRatio if available, else inline
+        if (typeof window.calculateVolRatio === 'function') {
+            return window.calculateVolRatio(buy, sell);
+        }
         if (sell > 0) return (buy / sell) * 100;
-        if (buy > 0) return 999;
+        if (buy > 0) return null; // Infinite ratio (buy only)
         return 0;
     }
 
@@ -302,6 +314,66 @@
             case 'delay_ms':
                 return parseFloat(data.delay_ms_aggrade) || 0;
 
+            // Smart Analysis Metrics (prefer AnalyticsCore, fallback to legacy functions)
+            case 'smart_money_index':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateSmartMoneyIndex === 'function') {
+                    return AnalyticsCore.calculateSmartMoneyIndex(data).value || 0;
+                }
+                if (typeof calculateSmartMoneyIndex === 'function') {
+                    return calculateSmartMoneyIndex(data).value || 0;
+                }
+                return 0;
+            case 'trade_intensity':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateTradeIntensity === 'function') {
+                    return AnalyticsCore.calculateTradeIntensity(data).value || 0;
+                }
+                if (typeof calculateTradeIntensity === 'function') {
+                    return calculateTradeIntensity(data).value || 0;
+                }
+                return 0;
+            case 'accumulation_score':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateAccumulationScore === 'function') {
+                    return AnalyticsCore.calculateAccumulationScore(data).value || 0;
+                }
+                if (typeof calculateAccumulationScore === 'function') {
+                    return calculateAccumulationScore(data).value || 0;
+                }
+                return 0;
+            case 'whale_activity':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateWhaleActivity === 'function') {
+                    return AnalyticsCore.calculateWhaleActivity(data).value || 0;
+                }
+                if (typeof calculateWhaleActivity === 'function') {
+                    return calculateWhaleActivity(data).value || 0;
+                }
+                return 0;
+            case 'pressure_index':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculatePressureIndex === 'function') {
+                    return AnalyticsCore.calculatePressureIndex(data).value || 0;
+                }
+                if (typeof calculatePressureIndex === 'function') {
+                    return calculatePressureIndex(data).value || 0;
+                }
+                return 0;
+            case 'trend_strength':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateTrendStrength === 'function') {
+                    return AnalyticsCore.calculateTrendStrength(data).value || 0;
+                }
+                if (typeof calculateTrendStrength === 'function') {
+                    return calculateTrendStrength(data).value || 0;
+                }
+                return 0;
+            case 'breakout_probability':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateBreakoutProbability === 'function') {
+                    return AnalyticsCore.calculateBreakoutProbability(data).value || 0;
+                }
+                return 0;
+            case 'liquidity_stress_index':
+                if (typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.calculateLiquidityStressIndex === 'function') {
+                    return AnalyticsCore.calculateLiquidityStressIndex(data).value || 0;
+                }
+                return 0;
+
             default:
                 return parseFloat(data.percent_sum_VOL_minute_120_buy) || 0;
         }
@@ -320,7 +392,10 @@
         const volDurBody = document.getElementById('volDurBody');
         if (volDurBody) volDurBody.innerHTML = '';
         if (spikeBody) spikeBody.innerHTML = '';
-        if (microBody) microBody.innerHTML = '';
+        // DON'T clear microBody here - handled by async renderer to prevent flicker
+        if (freqBody) freqBody.innerHTML = '';
+        if (freqRatioBody) freqRatioBody.innerHTML = '';
+        // DON'T clear smartBody here - handled by async renderer to prevent flicker
 
         const spikeRows = [];
         const filterText = typeof getActiveFilterValue === 'function' ? getActiveFilterValue() : '';
@@ -341,6 +416,20 @@
         function normalizedNumber(val) {
             const num = Number(val);
             return Number.isFinite(num) ? num : 0;
+        }
+        
+        /**
+         * Convert value to sortable key that handles null (infinite) properly
+         * For descending: null/infinite should be at top (largest)
+         * For ascending: null/infinite should be at bottom (largest)
+         */
+        function sortKeyFor(val, order = 'desc') {
+            if (val === null || val === undefined) {
+                // Infinite ratio - for descending sort, treat as largest
+                return order === 'desc' ? Number.POSITIVE_INFINITY : Number.POSITIVE_INFINITY;
+            }
+            if (!Number.isFinite(val)) return 0;
+            return val;
         }
 
         function passesAdvancedFiltersWrapper(data) {
@@ -368,8 +457,11 @@
             for (const criterion of sortPipeline) {
                 if (!criterion || !criterion.metric) continue;
                 const order = criterion.order === 'asc' ? 'asc' : 'desc';
-                const valueA = normalizedNumber(getSortValue(dataA, criterion.metric));
-                const valueB = normalizedNumber(getSortValue(dataB, criterion.metric));
+                // Use sortKeyFor to handle null (infinite) values properly in sorting
+                const rawA = getSortValue(dataA, criterion.metric);
+                const rawB = getSortValue(dataB, criterion.metric);
+                const valueA = sortKeyFor(rawA, order);
+                const valueB = sortKeyFor(rawB, order);
                 const diff = order === 'asc' ? (valueA - valueB) : (valueB - valueA);
                 if (diff !== 0 && Number.isFinite(diff)) return diff;
             }
@@ -435,7 +527,7 @@
             }
 
             // Detect spikes
-            detectSpikes(data, coin, spikeRows);
+            detectSpikes(data, coin, spikeRows, pricePosition);
 
             // Summary row
             if (summaryBody) {
@@ -460,12 +552,46 @@
                 renderVolDurRow(volDurBody, coin, data);
             }
 
-            // Micro row
-            if (microBody) {
-                renderMicroRow(microBody, coin, data);
+            // Micro row - skip here, will be done via worker pool batch
+            // (sync fallback handled below)
+
+            // Frequency row
+            if (freqBody) {
+                renderFreqRow(freqBody, coin, data);
             }
 
+            // Freq Ratio row
+            if (freqRatioBody) {
+                renderFreqRatioRow(freqRatioBody, coin, data);
+            }
+
+            // Smart Analysis row - sync fallback (async batch below)
+            // Skip here, will be done via worker pool batch
+
             rowCount++;
+        }
+
+        // Microstructure Tab - use Worker Pool for multicore processing
+        if (microBody && window.workerPool) {
+            renderMicroTabAsync(microBody, sortedCoins, rowLimit);
+        } else if (microBody) {
+            // Fallback to sync if no worker pool
+            for (let i = 0; i < sortedCoins.length && i < rowLimit; i++) {
+                const [coin, data] = sortedCoins[i];
+                renderMicroRow(microBody, coin, data);
+            }
+        }
+
+        // Smart Analysis - DISABLED Worker Pool, use sync rendering instead
+        // Worker Pool has outdated field mappings, sync uses updated smart-formulas.js
+        if (smartBody) {
+            // Clear old content first
+            smartBody.innerHTML = '';
+            // Sync rendering with correct formulas
+            for (let i = 0; i < sortedCoins.length && i < rowLimit; i++) {
+                const [coin, data] = sortedCoins[i];
+                renderSmartRow(smartBody, coin, data);
+            }
         }
 
         // Render spike table
@@ -517,26 +643,15 @@
         vr.insertCell(8).textContent = fmtRatio(vb2h, vs2h);
         vr.insertCell(9).textContent = fmtRatio(vb24, vs24);
 
-        // Last Change
-        let lastChangeVal = null;
-        try {
-            if (data._history && Array.isArray(data._history) && data._history.length >= 2) {
-                const len = data._history.length;
-                const latest = data._history[len - 1];
-                const prev = data._history[len - 2];
-                const p0 = normalize(prev && (prev.price ?? prev.last));
-                const p1 = normalize(latest && (latest.price ?? latest.last));
-                if (p0 > 0 && p1 > 0) lastChangeVal = ((p1 - p0) / p0) * 100;
-            }
-        } catch (e) { lastChangeVal = null; }
-        if (lastChangeVal === null) lastChangeVal = parseFloat(data.percent_change) || 0;
+        // Last Change - use percent_change directly from WebSocket data
+        const lastChangeVal = parseFloat(data.percent_change) || 0;
 
         const lcCell = vr.insertCell(10);
-        lcCell.textContent = (Number.isFinite(lastChangeVal) ? Number(lastChangeVal.toFixed(2)) : 0) + '%';
+        lcCell.textContent = (lastChangeVal > 0 ? '+' : '') + lastChangeVal.toFixed(2) + '%';
         lcCell.className = lastChangeVal > 0 ? 'text-success' : lastChangeVal < 0 ? 'text-danger' : 'text-muted';
     }
 
-    function detectSpikes(data, coin, spikeRows) {
+    function detectSpikes(data, coin, spikeRows, pricePosition) {
         try {
             const spikeThreshold = 2.0;
             const timeframes = [
@@ -551,11 +666,31 @@
                 { label: '24h', volKeys: ['count_VOL_minute_1440_buy', 'vol_buy_24JAM', 'vol_buy_24h'], avgKeys: ['avg_VOLCOIN_buy_24JAM'] }
             ];
 
+            const priceChange = parseFloat(data.percent_change) || 0;
+            
+            // Calculate recommendation for spike
+            const selectedTf = (recTimeframeSelect && recTimeframeSelect.value) ? recTimeframeSelect.value : '120m';
+            const recResult = typeof calculateRecommendation === 'function' ? calculateRecommendation(data, pricePosition, selectedTf, true) : null;
+            const recommendation = recResult ? recResult.recommendation : 'HOLD';
+            const recConfidence = recResult ? (recResult.confidence || 0) : 0;
+            const recClassName = recResult ? (recResult.className || 'recommendation-hold') : 'recommendation-hold';
+
             for (const tf of timeframes) {
                 const vol = getNumeric(data, ...tf.volKeys);
                 const avg = getNumeric(data, ...tf.avgKeys);
                 if (avg > 0 && vol / avg >= spikeThreshold) {
-                    spikeRows.push({ coin, timeframe: tf.label, vol, avg, ratio: vol / avg, update_time: data.update_time || data.update_time_VOLCOIN || 0 });
+                    spikeRows.push({ 
+                        coin, 
+                        timeframe: tf.label, 
+                        vol, 
+                        avg, 
+                        ratio: vol / avg, 
+                        price_change: priceChange, 
+                        recommendation,
+                        recConfidence,
+                        recClassName,
+                        update_time: data.update_time || data.update_time_VOLCOIN || 0 
+                    });
                 }
             }
         } catch (e) { console.error('Spike detection error', e); }
@@ -596,10 +731,10 @@
         cell.className = riskScore >= 67 ? 'text-danger fw-bold' : riskScore >= 40 ? 'text-warning fw-bold' : 'text-success fw-bold';
 
         // Volume Ratio 2h
-        const volumeRatio2h = volSell2h > 0 ? (volBuy2h / volSell2h) * 100 : (volBuy2h > 0 ? 999 : 0);
+        const volumeRatio2h = volSell2h > 0 ? (volBuy2h / volSell2h) * 100 : (volBuy2h > 0 ? null : 0);
         cell = row.insertCell(6);
-        cell.textContent = Math.round(volumeRatio2h) + '%';
-        cell.className = volumeRatio2h > 200 ? 'text-success fw-bold' : volumeRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
+        cell.textContent = volumeRatio2h === null ? '∞' : Math.round(volumeRatio2h) + '%';
+        cell.className = (volumeRatio2h === null || volumeRatio2h > 200) ? 'text-success fw-bold' : volumeRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
 
         row.insertCell(7).textContent = volBuy2h;
         row.insertCell(8).textContent = volSell2h;
@@ -685,10 +820,10 @@
         row.insertCell(15).textContent = vb2h;
         row.insertCell(16).textContent = vs2h;
 
-        const volRatio2h = vs2h > 0 ? (vb2h / vs2h) * 100 : (vb2h > 0 ? 999 : 0);
+        const volRatio2h = vs2h > 0 ? (vb2h / vs2h) * 100 : (vb2h > 0 ? null : 0);
         const cell = row.insertCell(17);
-        cell.textContent = Math.round(volRatio2h) + '%';
-        cell.className = volRatio2h > 200 ? 'text-success fw-bold' : volRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
+        cell.textContent = volRatio2h === null ? '∞' : Math.round(volRatio2h) + '%';
+        cell.className = (volRatio2h === null || volRatio2h > 200) ? 'text-success fw-bold' : volRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
 
         row.insertCell(18).textContent = vb24;
         row.insertCell(19).textContent = vs24;
@@ -735,20 +870,143 @@
     }
 
     function renderMicroRow(body, coin, data) {
-        const analytics = data._analytics || {};
+        // Use pre-computed analytics if available, fallback to raw data
+        const a = data._analytics || {};
+        const tf = a.timeframes || {};
+        
+        // Get values from analytics first, then raw data as fallback (correct field names from WebSocket)
+        const volBuy2h = a.volBuy2h || Number(data.vol_buy_2JAM) || 0;
+        const volSell2h = a.volSell2h || Number(data.vol_sell_2JAM) || 0;
+        const freqBuy2h = a.freqBuy2h || Number(data.freq_buy_2JAM) || 0;
+        const freqSell2h = a.freqSell2h || Number(data.freq_sell_2JAM) || 0;
+        const avgVolBuy = a.avgBuy2h || Number(data.avg_VOLCOIN_buy_2JAM) || 1;
+        const avgVolSell = a.avgSell2h || Number(data.avg_VOLCOIN_sell_2JAM) || 1;
+        const avgFreqBuy = a.avgFreqBuy2h || Number(data.avg_FREQCOIN_buy_2JAM) || 1;
+        
+        // Get 1m and 5m data (correct field names from WebSocket)
+        const volBuy1m = (tf['1m'] && tf['1m'].volBuy) || Number(data.vol_buy_1MENIT) || 0;
+        const volBuy5m = (tf['5m'] && tf['5m'].volBuy) || Number(data.vol_buy_5MENIT) || 0;
+        const freqBuy1m = (tf['1m'] && tf['1m'].freqBuy) || Number(data.freq_buy_1MENIT) || 0;
+        const freqBuy5m = (tf['5m'] && tf['5m'].freqBuy) || Number(data.freq_buy_5MENIT) || 0;
+        
+        const totalVol = volBuy2h + volSell2h;
+        const totalFreq = freqBuy2h + freqSell2h;
+        
+        // Helper functions
+        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+        const safeDiv = (a, b, def = 0) => b > 0 ? a / b : def;
+        
+        // Cohesion Index
+        const volRatio = totalVol > 0 ? volBuy2h / totalVol : 0.5;
+        const freqRatio = totalFreq > 0 ? freqBuy2h / totalFreq : 0.5;
+        const pricePos = Number(data.price_position) || 50;
+        const priceFactor = pricePos / 100;
+        const cohesion = clamp(((volRatio + freqRatio + (1 - priceFactor)) / 3) * 100, 0, 100);
+        
+        // Acc Vol (Volume Acceleration) - use previously defined volBuy1m, volBuy5m
+        const avg5m = volBuy5m > 0 ? volBuy5m / 5 : 0;
+        const accVol = avg5m > 0 ? (volBuy1m - avg5m) / avg5m : 0;
+        
+        // FBI (Frequency Burst Index) - use previously defined freqBuy1m, freqBuy5m
+        const shortTermFreq = (freqBuy1m * 5 + freqBuy5m) / 6;
+        const fbi = safeDiv(shortTermFreq, avgFreqBuy, 1);
+        
+        // OFSI (Order Flow Stability Index)
+        const volDelta = volBuy2h - volSell2h;
+        const freqDelta = freqBuy2h - freqSell2h;
+        const volNorm = totalVol > 0 ? Math.abs(volDelta) / totalVol : 0;
+        const freqNorm = totalFreq > 0 ? Math.abs(freqDelta) / totalFreq : 0;
+        const ofsi = clamp((1 - Math.abs(volNorm - freqNorm)) * 100, 0, 100);
+        
+        // FSI (Flow Strength Index)
+        const buyPressure = safeDiv(volBuy2h, avgVolBuy, 1) + safeDiv(freqBuy2h, avgFreqBuy, 1);
+        const sellPressure = safeDiv(volSell2h, avgVolSell, 1) + safeDiv(freqSell2h, avgFreqBuy, 1);
+        const fsi = clamp(50 + (buyPressure - sellPressure) * 10, 0, 100);
+        
+        // Z-Press (Z-Weighted Pressure)
+        const volZBuy = (volBuy2h - avgVolBuy) / (avgVolBuy || 1);
+        const volZSell = (volSell2h - avgVolSell) / (avgVolSell || 1);
+        const zPress = clamp((volZBuy - volZSell) * 20, -100, 100);
+        
+        // TIM (Trade Imbalance Momentum)
+        const tim = totalVol > 0 ? ((volBuy2h - volSell2h) / totalVol) * 100 : 0;
+        
+        // CIS (Composite Institutional Signal)
+        const cis = clamp((cohesion * 0.3 + fsi * 0.3 + (fbi > 1 ? 50 : fbi * 50) * 0.2 + ofsi * 0.2), 0, 100);
+        
+        // LSI (Liquidity Shock Index)
+        const volSpike = safeDiv(volBuy2h + volSell2h, avgVolBuy + avgVolSell, 1);
+        const lsi = volSpike > 2 ? clamp(volSpike * 20, 0, 100) : 0;
+        
+        // Range Compression
+        const high = Number(data.high) || 0;
+        const low = Number(data.low) || 0;
+        const last = Number(data.last) || 0;
+        const range = high - low;
+        const rangeComp = last > 0 && range > 0 ? (range / last) * 100 : 0;
+        
+        // PFCI (Price-Flow Conflict Index)
+        const priceChange = Number(data.percent_change) || 0;
+        const flowDirection = volBuy2h > volSell2h ? 1 : -1;
+        const priceDirection = priceChange > 0 ? 1 : -1;
+        const pfci = priceDirection !== flowDirection ? Math.abs(priceChange) * 10 : 0;
+        
+        // Render row
         const row = body.insertRow();
         row.insertCell(0).textContent = coin;
-        row.insertCell(1).textContent = fmtPctFromUnit(analytics.multiTfCohesion || 0);
-        row.insertCell(2).textContent = fmtNum(analytics.volumeAcceleration || 0, 2);
-        row.insertCell(3).textContent = fmtNum(analytics.freqBurstBuy || 0, 2);
-        row.insertCell(4).textContent = fmtNum(analytics.orderFlowStabilityIndex || 0, 2);
-        row.insertCell(5).textContent = fmtNum(analytics.flowStrengthIndex || 0, 2);
-        row.insertCell(6).textContent = fmtNum(analytics.zWeightedPressure || 0, 2);
-        row.insertCell(7).textContent = fmtNum(analytics.tradeImbalanceMomentum || 0, 2);
-        row.insertCell(8).textContent = fmtNum(analytics.compositeInstitutionalSignal || 0, 2);
-        row.insertCell(9).textContent = fmtNum(analytics.liquidityShockIndex || 0, 2);
-        row.insertCell(10).textContent = fmtNum(analytics.rangeCompressionIndex || 0, 3);
-        row.insertCell(11).textContent = fmtNum(analytics.priceFlowConflictIndex || 0, 2);
+        
+        // Cohesion
+        const cohCell = row.insertCell(1);
+        cohCell.textContent = Math.round(cohesion) + '%';
+        cohCell.className = cohesion > 60 ? 'text-success' : cohesion < 40 ? 'text-danger' : 'text-warning';
+        
+        // Acc Vol
+        const accCell = row.insertCell(2);
+        accCell.textContent = accVol.toFixed(2);
+        accCell.className = accVol > 0.5 ? 'text-success' : accVol < -0.5 ? 'text-danger' : 'text-muted';
+        
+        // FBI
+        const fbiCell = row.insertCell(3);
+        fbiCell.textContent = fbi.toFixed(2);
+        fbiCell.className = fbi > 1.5 ? 'text-success fw-bold' : fbi > 1 ? 'text-warning' : 'text-muted';
+        
+        // OFSI
+        const ofsiCell = row.insertCell(4);
+        ofsiCell.textContent = Math.round(ofsi);
+        ofsiCell.className = ofsi > 70 ? 'text-success' : ofsi < 30 ? 'text-danger' : 'text-muted';
+        
+        // FSI
+        const fsiCell = row.insertCell(5);
+        fsiCell.textContent = Math.round(fsi);
+        fsiCell.className = fsi > 60 ? 'text-success' : fsi < 40 ? 'text-danger' : 'text-warning';
+        
+        // Z-Press
+        const zpCell = row.insertCell(6);
+        zpCell.textContent = (zPress > 0 ? '+' : '') + zPress.toFixed(1);
+        zpCell.className = zPress > 20 ? 'text-success' : zPress < -20 ? 'text-danger' : 'text-muted';
+        
+        // TIM
+        const timCell = row.insertCell(7);
+        timCell.textContent = (tim > 0 ? '+' : '') + tim.toFixed(1);
+        timCell.className = tim > 20 ? 'text-success' : tim < -20 ? 'text-danger' : 'text-muted';
+        
+        // CIS
+        const cisCell = row.insertCell(8);
+        cisCell.textContent = Math.round(cis);
+        cisCell.className = cis > 60 ? 'text-success fw-bold' : cis < 40 ? 'text-danger' : 'text-warning';
+        
+        // LSI
+        const lsiCell = row.insertCell(9);
+        lsiCell.textContent = Math.round(lsi);
+        lsiCell.className = lsi > 50 ? 'text-warning fw-bold' : 'text-muted';
+        
+        // Range Comp
+        row.insertCell(10).textContent = rangeComp.toFixed(3);
+        
+        // PFCI
+        const pfciCell = row.insertCell(11);
+        pfciCell.textContent = pfci.toFixed(1);
+        pfciCell.className = pfci > 30 ? 'text-warning fw-bold' : 'text-muted';
     }
 
     function renderSpikeTable(body, spikeRows, rowLimit) {
@@ -762,12 +1020,355 @@
             r.insertCell(1).textContent = s.timeframe;
             r.insertCell(2).textContent = s.vol;
             r.insertCell(3).textContent = s.avg;
-            const cell = r.insertCell(4);
-            cell.textContent = s.ratio.toFixed(2) + 'x';
-            cell.className = s.ratio >= 4 ? 'text-success fw-bold' : s.ratio >= 2 ? 'text-warning fw-bold' : '';
+            const ratioCell = r.insertCell(4);
+            ratioCell.textContent = s.ratio.toFixed(2) + 'x';
+            ratioCell.className = s.ratio >= 4 ? 'text-success fw-bold' : s.ratio >= 2 ? 'text-warning fw-bold' : '';
+            
+            const priceCell = r.insertCell(5);
+            const pc = s.price_change || 0;
+            priceCell.textContent = (pc > 0 ? '+' : '') + pc.toFixed(2) + '%';
+            priceCell.className = pc > 0 ? 'text-success fw-bold' : pc < 0 ? 'text-danger fw-bold' : 'text-muted';
+            
+            const recCell = r.insertCell(6);
+            recCell.textContent = s.recommendation ? `${s.recommendation} (${s.recConfidence}%)` : 'HOLD';
+            recCell.className = s.recClassName || 'recommendation-hold';
+            
             const ts = s.update_time && s.update_time < 1e12 ? s.update_time * 1000 : s.update_time;
-            r.insertCell(5).textContent = ts ? new Date(ts).toLocaleString() : '-';
+            r.insertCell(7).textContent = ts ? new Date(ts).toLocaleString() : '-';
         }
+    }
+
+    // ===================== Frequency Tab Renderer =====================
+    function renderFreqRow(body, coin, data) {
+        const row = body.insertRow();
+        row.dataset.coin = coin;
+
+        const getFreq = (...keys) => {
+            for (const k of keys) {
+                if (data[k] !== undefined && data[k] !== null) {
+                    const n = Number(data[k]);
+                    if (!isNaN(n)) return n;
+                }
+            }
+            return 0;
+        };
+
+        const freqBuy1m = getFreq('freq_buy_1MENIT', 'count_FREQ_minute1_buy');
+        const freqSell1m = getFreq('freq_sell_1MENIT', 'count_FREQ_minute1_sell');
+        const freqBuy5m = getFreq('freq_buy_5MENIT', 'count_FREQ_minute_5_buy');
+        const freqSell5m = getFreq('freq_sell_5MENIT', 'count_FREQ_minute_5_sell');
+        const freqBuy10m = getFreq('freq_buy_10MENIT', 'count_FREQ_minute_10_buy');
+        const freqSell10m = getFreq('freq_sell_10MENIT', 'count_FREQ_minute_10_sell');
+        const freqBuy30m = getFreq('freq_buy_30MENIT', 'count_FREQ_minute_30_buy');
+        const freqSell30m = getFreq('freq_sell_30MENIT', 'count_FREQ_minute_30_sell');
+        const freqBuy1h = getFreq('freq_buy_1JAM', 'count_FREQ_minute_60_buy');
+        const freqSell1h = getFreq('freq_sell_1JAM', 'count_FREQ_minute_60_sell');
+        const freqBuy2h = getFreq('freq_buy_2JAM', 'count_FREQ_minute_120_buy');
+        const freqSell2h = getFreq('freq_sell_2JAM', 'count_FREQ_minute_120_sell');
+        const freqBuy24h = getFreq('freq_buy_24JAM', 'count_FREQ_minute_1440_buy');
+        const freqSell24h = getFreq('freq_sell_24JAM', 'count_FREQ_minute_1440_sell');
+
+        row.insertCell(0).textContent = coin;
+        
+        const addFreqCell = (buy, sell, idx) => {
+            const buyCell = row.insertCell(idx);
+            buyCell.textContent = buy;
+            buyCell.className = buy > sell ? 'text-success' : 'text-muted';
+            
+            const sellCell = row.insertCell(idx + 1);
+            sellCell.textContent = sell;
+            sellCell.className = sell > buy ? 'text-danger' : 'text-muted';
+        };
+
+        addFreqCell(freqBuy1m, freqSell1m, 1);
+        addFreqCell(freqBuy5m, freqSell5m, 3);
+        addFreqCell(freqBuy10m, freqSell10m, 5);
+        addFreqCell(freqBuy30m, freqSell30m, 7);
+        addFreqCell(freqBuy1h, freqSell1h, 9);
+        addFreqCell(freqBuy2h, freqSell2h, 11);
+        addFreqCell(freqBuy24h, freqSell24h, 13);
+    }
+
+    // ===================== Freq Ratio Tab Renderer =====================
+    function renderFreqRatioRow(body, coin, data) {
+        const row = body.insertRow();
+        row.dataset.coin = coin;
+
+        const analytics = data._analytics || {};
+        const tf = analytics.timeframes || {};
+
+        const getFreqRatio = (tfKey) => {
+            const tfData = tf[tfKey] || {};
+            const buy = tfData.freqBuy || 0;
+            const sell = tfData.freqSell || 0;
+            if (sell > 0) return Math.round((buy / sell) * 100);
+            if (buy > 0) return null; // Infinite ratio
+            return 0;
+        };
+
+        const fmtRatio = (ratio) => {
+            if (ratio === null) return '∞';
+            return ratio + '%';
+        };
+
+        const getRatioClass = (ratio) => {
+            if (ratio > 150) return 'text-success fw-bold';
+            if (ratio > 100) return 'text-success';
+            if (ratio < 50) return 'text-danger fw-bold';
+            if (ratio < 80) return 'text-danger';
+            return 'text-warning';
+        };
+
+        row.insertCell(0).textContent = coin;
+
+        const timeframes = ['1m', '5m', '10m', '30m', '60m', '120m', '24h'];
+        timeframes.forEach((tfKey, idx) => {
+            const ratio = getFreqRatio(tfKey);
+            const cell = row.insertCell(idx + 1);
+            cell.textContent = fmtRatio(ratio);
+            cell.className = getRatioClass(ratio);
+        });
+
+        // Freq vs Avg 2h
+        const freqVsAvg = analytics.freqBuy_vs_avg_percent || 0;
+        const vsAvgCell = row.insertCell(8);
+        vsAvgCell.textContent = Math.round(freqVsAvg) + '%';
+        vsAvgCell.className = freqVsAvg > 150 ? 'text-success fw-bold' : freqVsAvg > 100 ? 'text-success' : freqVsAvg < 50 ? 'text-danger' : 'text-warning';
+
+        // Freq Spike (freq vs avg ratio)
+        const avgFreqBuy = analytics.avgFreqBuy2h || 1;
+        const freqBuy2h = analytics.freqBuy2h || 0;
+        const freqSpike = avgFreqBuy > 0 ? freqBuy2h / avgFreqBuy : 0;
+        const spikeCell = row.insertCell(9);
+        spikeCell.textContent = freqSpike.toFixed(2) + 'x';
+        spikeCell.className = freqSpike >= 2 ? 'text-success fw-bold' : freqSpike >= 1 ? 'text-warning' : 'text-muted';
+    }
+
+    // ===================== Microstructure Tab Async Renderer =====================
+    let microRenderPending = false;
+    let lastMicroRenderTime = 0;
+    const MICRO_RENDER_THROTTLE = 1000; // Don't re-render more than once per second
+    
+    async function renderMicroTabAsync(body, sorted, limit) {
+        const now = Date.now();
+        
+        // Throttle: skip if rendered recently
+        if (now - lastMicroRenderTime < MICRO_RENDER_THROTTLE) {
+            return;
+        }
+        
+        if (microRenderPending) return;
+        microRenderPending = true;
+        lastMicroRenderTime = now;
+        
+        try {
+            // Prepare batch data for worker - use structuredClone to prevent race conditions
+            const batchData = {};
+            for (let i = 0; i < sorted.length && i < limit; i++) {
+                const [coin, data] = sorted[i];
+                // Clone data to prevent race condition with WebSocket updates
+                try {
+                    batchData[coin] = typeof structuredClone === 'function' 
+                        ? structuredClone(data) 
+                        : JSON.parse(JSON.stringify(data));
+                } catch (e) {
+                    batchData[coin] = data; // fallback if clone fails
+                }
+            }
+            
+            // Send to worker pool for parallel processing
+            const results = await window.workerPool.computeAnalyticsBatch(batchData);
+            
+            // Only clear and render if this is still the most recent request
+            if (lastMicroRenderTime === now) {
+                body.innerHTML = '';
+                
+                for (let i = 0; i < sorted.length && i < limit; i++) {
+                    const [coin] = sorted[i];
+                    const metrics = results[coin];
+                    if (metrics && metrics.micro) {
+                        renderMicroRowFromWorker(body, coin, metrics.micro);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[MicroTab] Worker error, fallback to sync:', err);
+            body.innerHTML = '';
+            for (let i = 0; i < sorted.length && i < limit; i++) {
+                const [coin, data] = sorted[i];
+                renderMicroRow(body, coin, data);
+            }
+        } finally {
+            microRenderPending = false;
+        }
+    }
+    
+    // Render micro row from worker result (pre-computed metrics)
+    function renderMicroRowFromWorker(body, coin, m) {
+        const row = body.insertRow();
+        row.insertCell(0).textContent = coin;
+        
+        // Cohesion
+        const cohCell = row.insertCell(1);
+        cohCell.textContent = Math.round(m.cohesion) + '%';
+        cohCell.className = m.cohesion > 60 ? 'text-success' : m.cohesion < 40 ? 'text-danger' : 'text-warning';
+        
+        // Acc Vol (Volume Acceleration)
+        const accCell = row.insertCell(2);
+        const accVol = m.accVol || 0;
+        accCell.textContent = accVol.toFixed(2);
+        accCell.className = accVol > 0.5 ? 'text-success' : accVol < -0.5 ? 'text-danger' : 'text-muted';
+        
+        // FBI
+        const fbiCell = row.insertCell(3);
+        fbiCell.textContent = m.fbi.toFixed(2);
+        fbiCell.className = m.fbi > 1.5 ? 'text-success fw-bold' : m.fbi > 1 ? 'text-warning' : 'text-muted';
+        
+        // OFSI
+        const ofsiCell = row.insertCell(4);
+        ofsiCell.textContent = Math.round(m.ofsi);
+        ofsiCell.className = m.ofsi > 70 ? 'text-success' : m.ofsi < 30 ? 'text-danger' : 'text-muted';
+        
+        // FSI
+        const fsiCell = row.insertCell(5);
+        fsiCell.textContent = Math.round(m.fsi);
+        fsiCell.className = m.fsi > 60 ? 'text-success' : m.fsi < 40 ? 'text-danger' : 'text-warning';
+        
+        // Z-Press
+        const zpCell = row.insertCell(6);
+        zpCell.textContent = (m.zPress > 0 ? '+' : '') + m.zPress.toFixed(1);
+        zpCell.className = m.zPress > 20 ? 'text-success' : m.zPress < -20 ? 'text-danger' : 'text-muted';
+        
+        // TIM
+        const timCell = row.insertCell(7);
+        timCell.textContent = (m.tim > 0 ? '+' : '') + m.tim.toFixed(1);
+        timCell.className = m.tim > 20 ? 'text-success' : m.tim < -20 ? 'text-danger' : 'text-muted';
+        
+        // CIS
+        const cisCell = row.insertCell(8);
+        cisCell.textContent = Math.round(m.cis);
+        cisCell.className = m.cis > 60 ? 'text-success fw-bold' : m.cis < 40 ? 'text-danger' : 'text-warning';
+        
+        // LSI
+        const lsiCell = row.insertCell(9);
+        lsiCell.textContent = Math.round(m.lsi);
+        lsiCell.className = m.lsi > 50 ? 'text-warning fw-bold' : 'text-muted';
+        
+        // Range Comp
+        row.insertCell(10).textContent = m.rangeComp.toFixed(3);
+        
+        // PFCI
+        const pfciCell = row.insertCell(11);
+        pfciCell.textContent = m.pfci.toFixed(1);
+        pfciCell.className = m.pfci > 30 ? 'text-warning fw-bold' : 'text-muted';
+    }
+
+    // ===================== Smart Analysis Tab Renderer =====================
+    
+    function renderSmartRow(body, coin, data) {
+        const row = body.insertRow();
+        row.dataset.coin = coin;
+
+        // Check if AnalyticsCore is available (preferred) or legacy computeSmartMetrics
+        const hasAnalyticsCore = typeof AnalyticsCore !== 'undefined' && typeof AnalyticsCore.computeAllSmartMetrics === 'function';
+        const hasLegacy = typeof computeSmartMetrics === 'function';
+        
+        if (!hasAnalyticsCore && !hasLegacy) {
+            row.insertCell(0).textContent = coin;
+            for (let i = 1; i <= 12; i++) {
+                row.insertCell(i).textContent = '-';
+            }
+            return;
+        }
+
+        // Use AnalyticsCore if available, otherwise fall back to legacy
+        const metrics = hasAnalyticsCore 
+            ? AnalyticsCore.computeAllSmartMetrics(data) 
+            : computeSmartMetrics(data);
+
+        row.insertCell(0).textContent = coin;
+
+        // SMI (Smart Money Index)
+        const smiCell = row.insertCell(1);
+        smiCell.textContent = Math.round(metrics.smi.value);
+        smiCell.className = metrics.smi.className;
+        smiCell.title = metrics.smi.interpretation;
+
+        // Trade Intensity
+        const intCell = row.insertCell(2);
+        intCell.textContent = Math.round(metrics.intensity.value) + '%';
+        intCell.className = metrics.intensity.className;
+        intCell.title = metrics.intensity.level;
+
+        // Momentum Divergence
+        const divCell = row.insertCell(3);
+        divCell.textContent = metrics.divergence.interpretation;
+        divCell.className = metrics.divergence.className;
+
+        // Accumulation Score
+        const accumCell = row.insertCell(4);
+        accumCell.textContent = metrics.accumScore.value;
+        accumCell.className = metrics.accumScore.className;
+        accumCell.title = metrics.accumScore.interpretation;
+
+        // Whale Activity
+        const whaleCell = row.insertCell(5);
+        whaleCell.textContent = Math.round(metrics.whale.value);
+        whaleCell.className = metrics.whale.className;
+        whaleCell.title = metrics.whale.level;
+
+        // R/I Ratio
+        const riCell = row.insertCell(6);
+        riCell.textContent = metrics.riRatio.type;
+        riCell.className = metrics.riRatio.className;
+
+        // Pressure Index
+        const pressCell = row.insertCell(7);
+        const pressVal = metrics.pressure.value;
+        pressCell.textContent = (pressVal > 0 ? '+' : '') + Math.round(pressVal);
+        pressCell.className = metrics.pressure.className;
+        pressCell.title = metrics.pressure.direction;
+
+        // Trend Strength
+        const trendCell = row.insertCell(8);
+        trendCell.textContent = metrics.trendStrength.value + '%';
+        trendCell.className = metrics.trendStrength.className;
+        trendCell.title = metrics.trendStrength.level + ' ' + metrics.trendStrength.direction;
+
+        // Breakout Probability (NEW)
+        const breakoutCell = row.insertCell(9);
+        if (metrics.breakout) {
+            breakoutCell.textContent = metrics.breakout.value + '%';
+            breakoutCell.className = metrics.breakout.className;
+            breakoutCell.title = 'Direction: ' + metrics.breakout.direction + ' | Confidence: ' + metrics.breakout.confidence;
+        } else {
+            breakoutCell.textContent = '-';
+        }
+
+        // LSI - Liquidity Stress Index (NEW)
+        const lsiCell = row.insertCell(10);
+        if (metrics.lsi) {
+            lsiCell.textContent = metrics.lsi.value.toFixed(1);
+            lsiCell.className = metrics.lsi.className;
+            lsiCell.title = metrics.lsi.level;
+        } else {
+            lsiCell.textContent = '-';
+        }
+
+        // Market Mode (NEW)
+        const modeCell = row.insertCell(11);
+        if (metrics.marketMode) {
+            modeCell.textContent = metrics.marketMode.mode;
+            modeCell.className = metrics.marketMode.className;
+            modeCell.title = 'Confidence: ' + metrics.marketMode.confidence + '%';
+        } else {
+            modeCell.textContent = '-';
+        }
+
+        // Smart Signal
+        const sigCell = row.insertCell(12);
+        sigCell.textContent = metrics.smartSignal.signal + ' (' + metrics.smartSignal.confidence + '%)';
+        sigCell.className = metrics.smartSignal.className;
     }
 
     // ===================== Exports =====================

@@ -16,17 +16,55 @@
             spikes: document.getElementById('coinFilter_spikes'),
             recs: document.getElementById('coinFilter_recs'),
             alerts: document.getElementById('coinFilter_alerts'),
-            micro: document.getElementById('coinFilter_micro')
+            micro: document.getElementById('coinFilter_micro'),
+            frequency: document.getElementById('coinFilter_frequency'),
+            freqRatio: document.getElementById('coinFilter_freqRatio'),
+            smart: document.getElementById('coinFilter_smart')
         };
 
         // debounce is in js/modules/helpers.js
 
-        // Schedule updates to the table at most once per 150ms
+        // Schedule updates to the table at most once per 300ms (increased from 150ms for high-volume streams)
         // `updateTable` is defined later; debounce will call it when available.
         const scheduleUpdateTable = debounce(function () {
-            try { if (typeof updateTable === 'function') updateTable(); }
-            catch (e) { /* ignore */ }
-        }, 150);
+            try { 
+                if (typeof updateTable === 'function') {
+                    updateTable();
+                } else if (typeof window.updateTable === 'function') {
+                    window.updateTable();
+                } else {
+                    console.warn('[scheduleUpdateTable] updateTable not defined yet');
+                }
+            }
+            catch (e) { console.error('[scheduleUpdateTable] error:', e); }
+        }, 300);
+        
+        // Throttle per-coin updates to avoid processing same coin too frequently
+        const lastCoinUpdate = {};
+        const COIN_THROTTLE_MS_MIN = 100; // Min 100ms between same coin updates
+        const COIN_THROTTLE_MS_MAX = 500; // Max 500ms during high load
+        let adaptiveThrottleMs = COIN_THROTTLE_MS_MIN;
+        
+        // Track message rate for adaptive throttling
+        let _msgCount = 0;
+        let _msgRatePerSec = 0;
+        setInterval(() => {
+            _msgRatePerSec = _msgCount;
+            _msgCount = 0;
+            // Adaptive throttle based on message rate
+            if (_msgRatePerSec > 500) {
+                adaptiveThrottleMs = COIN_THROTTLE_MS_MAX;
+            } else if (_msgRatePerSec > 200) {
+                adaptiveThrottleMs = 300;
+            } else if (_msgRatePerSec < 100) {
+                adaptiveThrottleMs = COIN_THROTTLE_MS_MIN;
+            }
+        }, 1000);
+        
+        function getAdaptiveThrottle() {
+            return adaptiveThrottleMs;
+        }
+        
         let activeFilterTab = 'summary';
 
         function setActiveFilterTab(tab) {
@@ -90,7 +128,10 @@
                 'alerts-tab': 'alerts',
                 'insight-tab': 'summary',
                 'info-tab': 'summary',
-                'micro-tab': 'micro'
+                'micro-tab': 'micro',
+                'freq-tab': 'frequency',
+                'freqratio-tab': 'freqRatio',
+                'smart-tab': 'smart'
             };
             for (const tid in tabMap) {
                 const btn = document.getElementById(tid);
@@ -486,8 +527,31 @@
             } catch (e) { console.error('showInsightTab error', e); window.__displayError(e); }
         };
 
-        // Object to store data by coin
+        // Object to store data by coin - MUST be on window immediately for update-table.js
         const coinDataMap = {};
+        window.coinDataMap = coinDataMap; // Expose immediately!
+        
+        // ===================== PRELOAD HISTORY ONLY (NOT DATA) =====================
+        // Preload history arrays from localStorage for analytics continuity
+        // But DON'T render - wait for real WebSocket data
+        function preloadHistoryFromStorage() {
+            try {
+                const PERSIST_KEY = 'okx_calc_persist_history';
+                const store = JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}');
+                const coins = Object.keys(store);
+                
+                if (coins.length === 0) return;
+                
+                // Store only history arrays, data will come from WebSocket
+                window._preloadedHistory = store;
+                console.log(`[Startup] Preloaded history for ${coins.length} coins`);
+            } catch (e) { 
+                console.warn('[Startup] Failed to preload history:', e); 
+            }
+        }
+        
+        // Run preload immediately
+        preloadHistoryFromStorage();
 
         // Delegated click handler: ensure clicks anywhere in a summary row open the insight tab.
         try {
@@ -545,7 +609,30 @@
             const coin = raw.coin; // Extract the coin from data
             // store last raw message and coin for UI inspection
             try { window._lastWsRaw = raw; window._lastReceivedCoin = coin; } catch (e) { }
+            
+            // Update last received time in UI (throttled to reduce DOM updates)
+            const now = Date.now();
+            try {
+                if (!window._lastUIUpdate || now - window._lastUIUpdate > 500) {
+                    const lastUpdateEl = document.getElementById('lastUpdateTime');
+                    if (lastUpdateEl) lastUpdateEl.textContent = 'Last: ' + new Date().toLocaleTimeString();
+                    window._lastUIUpdate = now;
+                }
+            } catch (e) { }
+            
             if (!coin) return; // If there's no coin, skip
+            
+            // Track message rate for adaptive throttling
+            _msgCount++;
+            
+            // Throttle per-coin: skip if same coin was updated less than adaptive throttle ago
+            const lastUpdate = lastCoinUpdate[coin] || 0;
+            const throttleMs = getAdaptiveThrottle();
+            if (now - lastUpdate < throttleMs) {
+                return; // Skip this update, too soon
+            }
+            lastCoinUpdate[coin] = now;
+            
             const prevCoinData = coinDataMap[coin] || null;
             const prevAnalytics = prevCoinData && prevCoinData._analytics ? prevCoinData._analytics : null;
 
@@ -605,8 +692,13 @@
                 data.risk_score = data._analytics.riskScore;
                 // keep history; prefer persisted history when available
                 if (!data._history || !Array.isArray(data._history) || data._history.length === 0) {
-                    // try load persisted
-                    const persisted = persistHistoryEnabled ? loadPersistedHistory(coin) : [];
+                    // try load from preloaded first (faster), then from localStorage
+                    let persisted = [];
+                    if (window._preloadedHistory && window._preloadedHistory[coin]) {
+                        persisted = window._preloadedHistory[coin];
+                    } else if (persistHistoryEnabled) {
+                        persisted = loadPersistedHistory(coin);
+                    }
                     data._history = (persisted && persisted.length > 0) ? persisted.slice(-MAX_HISTORY) : [];
                 }
                 // include frequency fields in persisted history so z-scores can be computed later
@@ -614,9 +706,12 @@
                     ts: Date.now(),
                     volBuy2h: data._analytics.volBuy2h || 0,
                     volSell2h: data._analytics.volSell2h || 0,
+                    volBuy24h: data._analytics.volBuy24h || 0,
+                    volSell24h: data._analytics.volSell24h || 0,
                     freqBuy2h: data._analytics.freqBuy2h || 0,
                     freqSell2h: data._analytics.freqSell2h || 0,
                     price: Number(data.last) || 0,
+                    change: Number(data.percent_change) || 0,
                     high: Number(data.high || data.last || 0),
                     low: Number(data.low || data.last || 0),
                     liquidity: Number(data._analytics.liquidity_avg_trade_value || 0)
@@ -840,11 +935,22 @@
 
             // Store sanitized data by coin
             coinDataMap[coin] = data;
+            window.coinDataMap = coinDataMap; // keep window in sync
 
             // Evaluate alert rules for this incoming data (non-blocking)
             try { if (typeof evaluateAlertRulesForData === 'function') evaluateAlertRulesForData(data); } catch (e) { console.warn('evaluateAlertRules call failed', e); }
 
-            scheduleUpdateTable(); // Update table after receiving new data (debounced)
+            // DIRECT call to updateTable (bypass debounce for debugging)
+            // scheduleUpdateTable(); 
+            try {
+                if (typeof window.updateTable === 'function') {
+                    // Still use debounce but ensure it's working
+                    if (!window._lastTableUpdate || (Date.now() - window._lastTableUpdate) > 300) {
+                        window._lastTableUpdate = Date.now();
+                        window.updateTable();
+                    }
+                }
+            } catch (e) { console.error('updateTable call failed', e); }
         };
 
         // onclose/onerror are handled when a socket is (re)created via attachHandlers

@@ -1,4 +1,17 @@
 // Analytics & recommendation formulas extracted from the main dashboard logic.
+// NOTE: For consistency, use AnalyticsCore functions when available.
+
+// Use global toNum from AnalyticsCore if available
+const _toNum = (v) => {
+    if (typeof window !== 'undefined' && window.toNum) {
+        return window.toNum(v);
+    }
+    if (v === undefined || v === null) return 0;
+    if (typeof v === 'number') return v;
+    const s = String(v).replace(/,/g, '');
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+};
 
 /**
  * Converts a set of possible numeric keys into a normalized number.
@@ -14,14 +27,14 @@ function localGetNumeric(obj, ...keys) {
         if (!key) continue;
         if (obj[key] !== undefined && obj[key] !== null) {
             const v = obj[key];
-            const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
-            if (!isNaN(n)) return n;
+            const n = _toNum(v);
+            if (n !== 0 || v === 0 || v === '0') return n;
         }
         const lk = key.toLowerCase();
         if (lower[lk] !== undefined && lower[lk] !== null) {
             const v = lower[lk];
-            const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
-            if (!isNaN(n)) return n;
+            const n = _toNum(v);
+            if (n !== 0 || v === 0 || v === '0') return n;
         }
     }
     return 0;
@@ -43,14 +56,14 @@ function getNumeric(data, ...keys) {
         if (!key) continue;
         if (data[key] !== undefined && data[key] !== null) {
             const v = data[key];
-            const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
-            if (!isNaN(n)) return n;
+            const n = _toNum(v);
+            if (n !== 0 || v === 0 || v === '0') return n;
         }
         const lk = key.toLowerCase();
         if (lower[lk] !== undefined && lower[lk] !== null) {
             const v = lower[lk];
-            const n = Number(typeof v === 'string' ? v.replace(/,/g, '') : v);
-            if (!isNaN(n)) return n;
+            const n = _toNum(v);
+            if (n !== 0 || v === 0 || v === '0') return n;
         }
     }
     return 0;
@@ -60,13 +73,7 @@ function getNumeric(data, ...keys) {
  * Builds risk, liquidity, volume-ratio, and frequency analytics from a raw payload.
  */
 function computeAnalytics(p) {
-    const toNum = (v) => {
-        if (v === undefined || v === null) return 0;
-        if (typeof v === 'number') return v;
-        const s = String(v).replace(/,/g, '');
-        const n = Number(s);
-        return isNaN(n) ? 0 : n;
-    };
+    const toNum = _toNum; // Use the shared helper
     const pick = (...keys) => localGetNumeric(p, ...keys);
 
     const out = {};
@@ -152,22 +159,22 @@ function computeAnalytics(p) {
     out.volBuy2h = toNum(p.count_VOL_minute_120_buy) || toNum(p.vol_buy_2JAM) || toNum(p.vol_buy_120MENIT) || toNum(p.vol_buy_2jam);
     out.volSell2h = toNum(p.count_VOL_minute_120_sell) || toNum(p.vol_sell_2JAM) || toNum(p.vol_sell_120MENIT) || toNum(p.vol_sell_2jam);
     out.total2h = out.volBuy2h + out.volSell2h;
-    out.volRatioBuySell_percent = out.volSell2h > 0 ? (out.volBuy2h / out.volSell2h) * 100 : (out.volBuy2h > 0 ? 999 : 0);
+    out.volRatioBuySell_percent = out.volSell2h > 0 ? (out.volBuy2h / out.volSell2h) * 100 : (out.volBuy2h > 0 ? null : 0);
     out.volDurability2h_percent = out.total2h > 0 ? (out.volBuy2h / out.total2h) * 100 : 0;
     out.volImbalance2h = out.total2h > 0 ? (out.volBuy2h - out.volSell2h) / out.total2h : 0;
     out.vwdi = out.total2h > 0 ? ((out.volBuy2h / out.total2h) * 2 - 1) : 0;
 
     out.avgBuy2h = toNum(p.avg_VOLCOIN_buy_2JAM) || toNum(p.avg_VOLCOIN_buy_2HOUR) || toNum(p.avg_VOLCOIN_buy_2jam) || toNum(p.avg_VOLCOIN_buy_120MENIT);
     out.avgSell2h = toNum(p.avg_VOLCOIN_sell_2JAM) || toNum(p.avg_VOLCOIN_sell_2HOUR) || toNum(p.avg_VOLCOIN_sell_2jam) || toNum(p.avg_VOLCOIN_sell_120MENIT);
-    out.volBuy_vs_avg_percent = out.avgBuy2h > 0 ? (out.volBuy2h / out.avgBuy2h) * 100 : (out.volBuy2h > 0 ? 999 : 0);
-    out.volSell_vs_avg_percent = out.avgSell2h > 0 ? (out.volSell2h / out.avgSell2h) * 100 : (out.volSell2h > 0 ? 999 : 0);
+    out.volBuy_vs_avg_percent = out.avgBuy2h > 0 ? (out.volBuy2h / out.avgBuy2h) * 100 : (out.volBuy2h > 0 ? null : 0);
+    out.volSell_vs_avg_percent = out.avgSell2h > 0 ? (out.volSell2h / out.avgSell2h) * 100 : (out.volSell2h > 0 ? null : 0);
 
     out.freqBuy2h = toNum(p.count_FREQ_minute_120_buy) || toNum(p.freq_buy_2JAM) || toNum(p.freq_buy_120MENIT) || toNum(p.freq_buy_2jam) || toNum(p.freq_buy_120) || 0;
     out.freqSell2h = toNum(p.count_FREQ_minute_120_sell) || toNum(p.freq_sell_2JAM) || toNum(p.freq_sell_120MENIT) || toNum(p.freq_sell_2jam) || toNum(p.freq_sell_120) || 0;
     out.avgFreqBuy2h = toNum(p.avg_FREQCOIN_buy_2JAM) || toNum(p.avg_FREQCOIN_buy_120MENIT) || toNum(p.avg_FREQCOIN_buy_2jam) || toNum(p.avg_FREQCOIN_buy_120) || 0;
     out.avgFreqSell2h = toNum(p.avg_FREQCOIN_sell_2JAM) || toNum(p.avg_FREQCOIN_sell_120MENIT) || toNum(p.avg_FREQCOIN_sell_2jam) || toNum(p.avg_FREQCOIN_sell_120) || 0;
-    out.freqBuy_vs_avg_percent = out.avgFreqBuy2h > 0 ? (out.freqBuy2h / out.avgFreqBuy2h) * 100 : (out.freqBuy2h > 0 ? 999 : 0);
-    out.freqSell_vs_avg_percent = out.avgFreqSell2h > 0 ? (out.freqSell2h / out.avgFreqSell2h) * 100 : (out.freqSell2h > 0 ? 999 : 0);
+    out.freqBuy_vs_avg_percent = out.avgFreqBuy2h > 0 ? (out.freqBuy2h / out.avgFreqBuy2h) * 100 : (out.freqBuy2h > 0 ? null : 0);
+    out.freqSell_vs_avg_percent = out.avgFreqSell2h > 0 ? (out.freqSell2h / out.avgFreqSell2h) * 100 : (out.freqSell2h > 0 ? null : 0);
     const totalFreq2h = out.freqBuy2h + out.freqSell2h;
     out.freqRatio2h_percent = totalFreq2h > 0 ? (out.freqBuy2h / totalFreq2h) * 100 : 0;
 
@@ -326,6 +333,7 @@ function calculateRecommendation(data, pricePosition, timeframe, applyState = fa
     const score = Math.max(-1, Math.min(1, rawScore));
     const confidence = Math.round(Math.abs(score) * 100);
 
+    // Calculate recommendation based on score first
     let recommendation = 'HOLD';
     if (score >= RECOMMENDATION_THRESHOLD) recommendation = 'BUY';
     else if (score <= -RECOMMENDATION_THRESHOLD) recommendation = 'SELL';
@@ -333,12 +341,19 @@ function calculateRecommendation(data, pricePosition, timeframe, applyState = fa
     const coin = data.coin || data.symbol || data.code || 'unknown';
     const className = recommendation === 'BUY' ? 'recommendation-buy' : (recommendation === 'SELL' ? 'recommendation-sell' : 'recommendation-hold');
 
+    // Apply cooldown AFTER calculating recommendation (fix: score is still accurate)
+    let finalRecommendation = recommendation;
     if (applyState) {
         const now = Date.now();
         const last = recommendationCooldowns[coin] || { ts: 0, rec: null };
+        
+        // Only apply cooldown if trying to flip from last recommendation
         if (now - last.ts < RECOMMENDATION_COOLDOWN_MS && last.rec && last.rec !== recommendation) {
-            recommendation = 'HOLD';
+            // Keep the last recommendation during cooldown, but score is still accurate
+            finalRecommendation = last.rec;
         }
+        
+        // Update cooldown state for non-HOLD recommendations
         if (recommendation !== 'HOLD') {
             recommendationCooldowns[coin] = { ts: now, rec: recommendation };
         } else if (!recommendationCooldowns[coin]) {
@@ -352,7 +367,7 @@ function calculateRecommendation(data, pricePosition, timeframe, applyState = fa
             timeframe: timeframe || '120m',
             price: Number(data.last) || 0,
             score,
-            recommendation,
+            recommendation: finalRecommendation,
             confidence,
             priceBias,
             volDur: volDurTf != null ? volDurTf : volDur2h,
@@ -367,5 +382,7 @@ function calculateRecommendation(data, pricePosition, timeframe, applyState = fa
         if (a.recommendationLog.length > 200) a.recommendationLog.shift();
     }
 
-    return { recommendation, confidence, className, score, factors };
+    // Return finalRecommendation (respects cooldown) but keep score accurate
+    const finalClassName = finalRecommendation === 'BUY' ? 'recommendation-buy' : (finalRecommendation === 'SELL' ? 'recommendation-sell' : 'recommendation-hold');
+    return { recommendation: finalRecommendation, confidence, className: finalClassName, score, factors };
 }

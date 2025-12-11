@@ -1,7 +1,7 @@
 /**
  * tab-renderers.js
  * Rendering functions for specialized dashboard tabs
- * Dependencies: coinDataMap, calculateRecommendation, computeATR, showAlertBanner, etc.
+ * Dependencies: coinDataMap, calculateRecommendation, AnalyticsCore, showAlertBanner, etc.
  */
 
 (function () {
@@ -20,6 +20,27 @@
         const n = Number(val);
         return Number.isFinite(n) ? Math.round(n).toLocaleString() : '-';
     };
+    
+    // ===================== Helpers (delegate to AnalyticsCore) =====================
+    function computeATR(history, periods = 14) {
+        if (typeof AnalyticsCore !== 'undefined' && AnalyticsCore.computeATR) {
+            return AnalyticsCore.computeATR(history, periods);
+        }
+        if (typeof window.computeATR === 'function') {
+            return window.computeATR(history, periods);
+        }
+        return 0;
+    }
+    
+    function getSmartMetrics(data) {
+        if (typeof AnalyticsCore !== 'undefined' && AnalyticsCore.computeAllSmartMetrics) {
+            return AnalyticsCore.computeAllSmartMetrics(data);
+        }
+        if (typeof computeSmartMetrics === 'function') {
+            return computeSmartMetrics(data);
+        }
+        return null;
+    }
 
     // ===================== Tab Render Throttling =====================
     const TAB_RENDER_INTERVALS = {
@@ -354,7 +375,8 @@
             const freqRatio = freqTotal > 0 ? (freqBuy / freqTotal) * 100 : 0;
             const volBuy = Number(analytics.volBuy2h) || 0;
             const volSell = Number(analytics.volSell2h) || 0;
-            const volRatio = volSell > 0 ? (volBuy / volSell) * 100 : (volBuy > 0 ? 999 : 0);
+            const volRatio = volSell > 0 ? (volBuy / volSell) * 100 : (volBuy > 0 ? null : 0);
+            const volRatioDisplay = volRatio === null ? '∞' : Math.round(volRatio) + '%';
             const stressClass = stressIndex >= 70 ? 'alert-danger' : stressIndex >= 50 ? 'alert-warning' : 'alert-success';
             pane.innerHTML = `
                 <div class="row g-3">
@@ -371,7 +393,7 @@
                     <div class="col-md-6">
                         <h6 class="text-info">Flow & Liquidity</h6>
                         <ul class="list-unstyled small mb-0">
-                            <li>Vol Ratio (2h): <strong>${fmtPct(volRatio, 1)}</strong></li>
+                            <li>Vol Ratio (2h): <strong>${volRatioDisplay}</strong></li>
                             <li>Freq Ratio (2h): <strong>${fmtPct(freqRatio, 1)}</strong></li>
                             <li>Risk Score: <strong>${riskScore}%</strong></li>
                             <li>Liquidity Proxy: <strong>${fmtNum(analytics.liquidity_avg_trade_value || 0, 2)}</strong></li>

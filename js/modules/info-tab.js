@@ -1,7 +1,7 @@
 /**
  * info-tab.js
- * Renders the Info/Runtime tab with system status, last raw JSON, and analytics snapshot
- * Dependencies: coinDataMap, ws, computeATR, getNumeric, calculateRecommendation, etc.
+ * Renders the Info/Runtime tab with system status, last raw JSON, analytics snapshot, and Smart Metrics
+ * Dependencies: coinDataMap, ws, AnalyticsCore, getNumeric, calculateRecommendation, etc.
  */
 
 (function () {
@@ -20,10 +20,22 @@
         const n = Number(val);
         return Number.isFinite(n) ? Math.round(n).toLocaleString() : '-';
     };
+    const fmtSign = (val, digits = 1) => {
+        const n = Number(val);
+        if (!Number.isFinite(n)) return '-';
+        return (n > 0 ? '+' : '') + n.toFixed(digits);
+    };
 
-    // ===================== Helpers =====================
+    // ===================== Helpers (delegate to AnalyticsCore when available) =====================
+    function getCore() {
+        return typeof AnalyticsCore !== 'undefined' ? AnalyticsCore : null;
+    }
+    
     function meanStd(arr) {
-        if (!arr.length) return { mean: 0, std: 0 };
+        const core = getCore();
+        if (core && core.meanStd) return core.meanStd(arr);
+        // Fallback
+        if (!arr || !arr.length) return { mean: 0, std: 0 };
         const mean = arr.reduce((sum, v) => sum + v, 0) / arr.length;
         const variance = arr.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / arr.length;
         return { mean, std: Math.sqrt(variance) };
@@ -46,6 +58,7 @@
     }
 
     function computeOBVProxy(history) {
+        // OBV Proxy using buy/sell volume difference
         if (history.length < 2) return 0;
         let obv = 0;
         for (let i = 1; i < history.length; i++) {
@@ -62,6 +75,7 @@
     }
 
     function computeVWAP(history) {
+        // Volume Weighted Average Price
         if (!history.length) return 0;
         let num = 0;
         let den = 0;
@@ -74,6 +88,145 @@
             }
         }
         return den > 0 ? num / den : 0;
+    }
+    
+    function computeATR(history, periods = 14) {
+        const core = getCore();
+        if (core && core.computeATR) return core.computeATR(history, periods);
+        if (typeof window.computeATR === 'function') return window.computeATR(history, periods);
+        return 0;
+    }
+    
+    // Compute all Smart Metrics using AnalyticsCore
+    function computeSmartMetricsForInfo(data) {
+        const core = getCore();
+        if (core && core.computeAllSmartMetrics) {
+            return core.computeAllSmartMetrics(data);
+        }
+        // Fallback empty metrics
+        return {
+            smi: { value: 0, interpretation: 'N/A', className: 'text-muted' },
+            intensity: { value: 0, level: 'N/A', className: 'text-muted' },
+            divergence: { interpretation: 'N/A', className: 'text-muted' },
+            accumScore: { value: 50, interpretation: 'N/A', className: 'text-muted' },
+            whale: { value: 0, level: 'N/A', className: 'text-muted' },
+            riRatio: { value: 100, type: 'N/A', className: 'text-muted' },
+            pressure: { value: 0, direction: 'N/A', className: 'text-muted' },
+            trendStrength: { value: 50, level: 'N/A', direction: 'N/A', className: 'text-muted' },
+            breakout: { value: 0, direction: 'N/A', confidence: 'N/A', className: 'text-muted' },
+            lsi: { value: 50, level: 'N/A', className: 'text-muted' },
+            marketMode: { mode: 'N/A', confidence: 0, className: 'text-muted' },
+            smartSignal: { signal: 'HOLD', confidence: 0, className: 'text-muted' }
+        };
+    }
+
+    // ===================== Render Documentation from JSON =====================
+    function renderInfoDocs() {
+        const docs = window.INFO_DOCS;
+        if (!docs) return '';
+        
+        // Features section
+        const featuresHtml = docs.features.map(f => 
+            `<li><span class="me-1">${f.icon}</span><strong>${f.name}:</strong> ${f.desc}</li>`
+        ).join('');
+        
+        // Smart Metrics section
+        const smartHtml = docs.smartMetrics.map(m => `
+            <div class="col-md-4 col-sm-6 mb-2">
+                <div class="p-2 rounded" style="background:rgba(0,0,0,0.3)">
+                    <div class="fw-bold text-warning">${m.icon} ${m.name}</div>
+                    <div class="small text-muted">${m.fullName}</div>
+                    <div class="small">${m.desc}</div>
+                    <div class="small text-info">${m.range || m.values || ''}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Microstructure section
+        const microHtml = docs.microMetrics.map(m => `
+            <div class="col-md-4 col-sm-6 mb-2">
+                <div class="p-2 rounded" style="background:rgba(0,0,0,0.3)">
+                    <div class="fw-bold text-info">${m.icon} ${m.name}</div>
+                    <div class="small text-muted">${m.fullName}</div>
+                    <div class="small">${m.desc}</div>
+                    <div class="small text-warning">${m.range || ''}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Durability levels
+        const durabilityHtml = docs.durabilityLevels.map(d => 
+            `<span class="badge ${d.class} me-1">${d.range}</span><small>${d.label} - ${d.desc}</small><br>`
+        ).join('');
+        
+        // Recommendations
+        const rec = docs.recommendations;
+        const recHtml = ['buy', 'sell', 'hold'].map(type => {
+            const r = rec[type];
+            return `
+                <div class="col-md-4">
+                    <h6 class="${r.class}">${r.icon} ${r.label} (${r.confidence})</h6>
+                    <ul class="small mb-0">${r.conditions.map(c => `<li>${c}</li>`).join('')}</ul>
+                </div>
+            `;
+        }).join('');
+        
+        // Tips
+        const tipsHtml = docs.tips.map(t => 
+            `<li><strong>${t.category}:</strong> ${t.tip}</li>`
+        ).join('');
+        
+        return `
+            <div class="card bg-dark text-light mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="text-info mb-0">✨ Fitur Dashboard v${docs.version}</h5>
+                        <small class="text-muted">Updated: ${docs.lastUpdated}</small>
+                    </div>
+                    <ul class="small mb-0">${featuresHtml}</ul>
+                </div>
+            </div>
+            
+            <div class="card bg-dark text-light mb-3">
+                <div class="card-body">
+                    <h5 class="text-info mb-3">🧠 Smart Analysis Metrics</h5>
+                    <div class="row g-2">${smartHtml}</div>
+                </div>
+            </div>
+            
+            <div class="card bg-dark text-light mb-3">
+                <div class="card-body">
+                    <h5 class="text-info mb-3">🔬 Microstructure Metrics</h5>
+                    <div class="row g-2">${microHtml}</div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-dark text-light mb-3">
+                        <div class="card-body">
+                            <h5 class="text-info mb-2">⚖️ Volume Durability Levels</h5>
+                            <div class="small">${durabilityHtml}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-dark text-light mb-3">
+                        <div class="card-body">
+                            <h5 class="text-info mb-2">💡 Pro Tips</h5>
+                            <ul class="small mb-0">${tipsHtml}</ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-dark text-light mb-3">
+                <div class="card-body">
+                    <h5 class="text-info mb-3">🎯 Recommendation Algorithm</h5>
+                    <div class="row">${recHtml}</div>
+                </div>
+            </div>
+        `;
     }
 
     // ===================== Main Render Function =====================
@@ -95,8 +248,9 @@
             const PERSIST_KEY = window.PERSIST_KEY || 'okx_calc_persist_history';
 
             const wsStateMap = { 0: 'CONNECTING', 1: 'OPEN', 2: 'CLOSING', 3: 'CLOSED' };
-            const wsState = (typeof ws !== 'undefined' && ws && ws.readyState !== undefined) 
-                ? wsStateMap[ws.readyState] || ws.readyState 
+            const wsObj = window.ws;
+            const wsState = (wsObj && wsObj.readyState !== undefined) 
+                ? wsStateMap[wsObj.readyState] || wsObj.readyState 
                 : 'N/A';
             const coinCount = Object.keys(coinDataMap || {}).length;
 
@@ -179,6 +333,9 @@
                     : null;
             } catch (e) { recSnapshot = null; }
 
+            // Compute Smart Metrics using AnalyticsCore
+            const smartMetrics = lastData ? computeSmartMetricsForInfo(lastData) : null;
+
             const analyticsSnapshot = {
                 pricePosition: fmtPct(pricePosition, 1),
                 priceZ: fmtNum(priceZScore, 2),
@@ -203,26 +360,86 @@
 
             const persistHistoryEnabled = window.persistHistoryEnabled !== undefined ? window.persistHistoryEnabled : false;
 
+            // Worker Pool Stats
+            const wpStats = window.workerPool ? window.workerPool.getStats() : null;
+            const wpStatus = wpStats 
+                ? `${wpStats.workers} workers (${wpStats.busy} busy, ${wpStats.queued} queued)` 
+                : 'Not initialized';
+            const wpTasks = wpStats ? wpStats.tasksCompleted : 0;
+            const wpAvgTime = wpStats ? wpStats.avgProcessTime.toFixed(1) : 0;
+
+            // WebSocket Heartbeat Status
+            const wsHeartbeatStatus = (function() {
+                if (typeof window.getWsHeartbeatStatus === 'function') {
+                    const hb = window.getWsHeartbeatStatus();
+                    if (hb.status === 'healthy') return '💚 Healthy';
+                    if (hb.status === 'delayed') return '💛 Delayed (' + Math.round(hb.elapsed/1000) + 's)';
+                    return '❤️ Stale (' + Math.round(hb.elapsed/1000) + 's)';
+                }
+                return '⚪ N/A';
+            })();
+            
+            // Message rate
+            const msgRate = typeof window.getWsMessageRate === 'function' 
+                ? fmtNum(window.getWsMessageRate(), 1) + '/s'
+                : '-';
+
+            // Build Smart Metrics HTML section
+            const smartHtml = smartMetrics ? `
+                <div class="col-12 mt-3">
+                    <h6 class="mb-2 text-info">🧠 Smart Metrics (Last Coin)</h6>
+                    <div class="row g-2 small">
+                        <div class="col-md-4">
+                            <div class="p-2 rounded" style="background:rgba(0,0,0,0.4)">
+                                <div><strong>SMI:</strong> <span class="${smartMetrics.smi.className}">${fmtNum(smartMetrics.smi.value, 0)}</span> <small class="text-muted">${smartMetrics.smi.interpretation}</small></div>
+                                <div><strong>Intensity:</strong> <span class="${smartMetrics.intensity.className}">${fmtPct(smartMetrics.intensity.value, 0)}</span> <small class="text-muted">${smartMetrics.intensity.level}</small></div>
+                                <div><strong>Divergence:</strong> <span class="${smartMetrics.divergence.className}">${smartMetrics.divergence.interpretation}</span></div>
+                                <div><strong>Accum Score:</strong> <span class="${smartMetrics.accumScore.className}">${fmtNum(smartMetrics.accumScore.value, 0)}</span> <small class="text-muted">${smartMetrics.accumScore.interpretation}</small></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 rounded" style="background:rgba(0,0,0,0.4)">
+                                <div><strong>Whale:</strong> <span class="${smartMetrics.whale.className}">${fmtNum(smartMetrics.whale.value, 0)}</span> <small class="text-muted">${smartMetrics.whale.level}</small></div>
+                                <div><strong>R/I Ratio:</strong> <span class="${smartMetrics.riRatio.className}">${smartMetrics.riRatio.type}</span></div>
+                                <div><strong>Pressure:</strong> <span class="${smartMetrics.pressure.className}">${fmtSign(smartMetrics.pressure.value, 0)}</span> <small class="text-muted">${smartMetrics.pressure.direction}</small></div>
+                                <div><strong>Trend:</strong> <span class="${smartMetrics.trendStrength.className}">${fmtPct(smartMetrics.trendStrength.value, 0)}</span> <small class="text-muted">${smartMetrics.trendStrength.level} ${smartMetrics.trendStrength.direction}</small></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 rounded" style="background:rgba(0,0,0,0.4)">
+                                <div><strong>Breakout%:</strong> <span class="${smartMetrics.breakout.className}">${fmtPct(smartMetrics.breakout.value, 0)}</span> <small class="text-muted">${smartMetrics.breakout.direction}</small></div>
+                                <div><strong>LSI:</strong> <span class="${smartMetrics.lsi.className}">${fmtNum(smartMetrics.lsi.value, 1)}</span> <small class="text-muted">${smartMetrics.lsi.level}</small></div>
+                                <div><strong>Mode:</strong> <span class="${smartMetrics.marketMode.className}">${smartMetrics.marketMode.mode}</span> <small class="text-muted">(${fmtNum(smartMetrics.marketMode.confidence, 0)}%)</small></div>
+                                <div><strong>Signal:</strong> <span class="${smartMetrics.smartSignal.className}">${smartMetrics.smartSignal.signal}</span> <small class="text-muted">(${smartMetrics.smartSignal.confidence}%)</small></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
             const html = `
                 <div class="card bg-dark text-light mb-2 p-3">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h5 class="mb-1">Runtime</h5>
-                            <div class="small text-muted">WebSocket: <strong>${wsState}</strong></div>
+                            <h5 class="mb-1">🔧 Runtime Status</h5>
+                            <div class="small text-muted">WebSocket: <strong>${wsState}</strong> ${wsHeartbeatStatus}</div>
+                            <div class="small text-muted">Message Rate: <strong>${msgRate}</strong></div>
                             <div class="small text-muted">Coins tracked: <strong>${coinCount}</strong></div>
                             <div class="small text-muted">Last update: <strong>${lastTs ? new Date(lastTs).toLocaleString() : '-'}</strong></div>
+                            <div class="small text-muted">🧵 Workers: <strong>${wpStatus}</strong></div>
                         </div>
                         <div class="text-end">
                             <div class="small text-muted">Persist enabled: <strong>${persistHistoryEnabled ? 'Yes' : 'No'}</strong></div>
                             <div class="small text-muted">Persisted coins: <strong>${persistedCoins}</strong></div>
                             <div class="small text-muted">Stored alerts: <strong>${alerts.length}</strong></div>
+                            <div class="small text-muted">🧵 Tasks done: <strong>${wpTasks}</strong> (avg ${wpAvgTime}ms)</div>
                         </div>
                     </div>
                     <hr/>
                     <div class="row">
                         <div class="col-md-6">
-                            <h6 class="mb-1">Last Raw JSON</h6>
-                            <pre id="lastRawJson" style="max-height:220px;overflow:auto;background:rgba(0,0,0,0.6);padding:10px;border-radius:6px;color:#cbd5e1;">${rawStr}</pre>
+                            <h6 class="mb-1">📄 Last Raw JSON</h6>
+                            <pre id="lastRawJson" style="max-height:200px;overflow:auto;background:rgba(0,0,0,0.6);padding:10px;border-radius:6px;color:#cbd5e1;font-size:11px;">${rawStr}</pre>
                         </div>
                         <div class="col-md-6">
                             <h6 class="mb-1">Last Summary</h6>
@@ -263,19 +480,44 @@
                                 <div>Recommendation: <strong>${recSnapshot ? recSnapshot.recommendation : 'HOLD'}${recSnapshot ? ` (${recSnapshot.confidence}% | ${fmtNum(recSnapshot.score, 2)})` : ''}</strong></div>
                             </div>
                         </div>
+                        ${smartHtml}
                     </div>
                     <hr/>
-                    <div class="d-flex gap-2 mt-2">
-                        <button id="exportPersistBtn" class="btn btn-sm btn-outline-primary">Export Persisted History</button>
-                        <button id="clearPersistBtn" class="btn btn-sm btn-outline-danger">Clear Persisted History</button>
-                        <button id="exportLSBtn" class="btn btn-sm btn-outline-secondary">Export okx_calc LocalStorage</button>
-                        <button id="clearLSBtn" class="btn btn-sm btn-outline-dark">Clear okx_calc LocalStorage</button>
-                        <button id="openRunJsonBtn" class="btn btn-sm btn-outline-success">Run JSON (Paste)</button>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <button id="exportPersistBtn" class="btn btn-sm btn-outline-primary">📥 Export History</button>
+                        <button id="clearPersistBtn" class="btn btn-sm btn-outline-danger">🗑️ Clear History</button>
+                        <button id="exportLSBtn" class="btn btn-sm btn-outline-secondary">📦 Export LocalStorage</button>
+                        <button id="clearLSBtn" class="btn btn-sm btn-outline-dark">🧹 Clear LocalStorage</button>
+                        <button id="openRunJsonBtn" class="btn btn-sm btn-outline-success">▶️ Run JSON (Paste)</button>
+                        <button id="refreshInfoBtn" class="btn btn-sm btn-outline-info">🔄 Refresh</button>
                     </div>
                     <div class="mt-2 small text-muted">LocalStorage keys: <strong>${lsKeys.length}</strong> (showing keys starting with 'okx_calc' or containing 'okx')</div>
                 </div>`;
 
             pane.innerHTML = html;
+
+            // Render documentation from JSON (only once, or update if needed)
+            let docsPane = document.getElementById('infoDocsContainer');
+            if (!docsPane) {
+                docsPane = document.createElement('div');
+                docsPane.id = 'infoDocsContainer';
+                docsPane.className = 'mt-3';
+                const container = document.getElementById('info');
+                if (container) {
+                    // Insert after infoRuntime, before any existing static content
+                    const existingStatic = container.querySelector('.card:not(#infoRuntime .card)');
+                    if (existingStatic) {
+                        container.insertBefore(docsPane, existingStatic);
+                    } else {
+                        container.appendChild(docsPane);
+                    }
+                }
+            }
+            // Render docs from JSON
+            const docsHtml = renderInfoDocs();
+            if (docsHtml && docsPane.innerHTML !== docsHtml) {
+                docsPane.innerHTML = docsHtml;
+            }
 
             // Wire buttons
             wireInfoTabButtons(persistStore, lsKeys);
@@ -290,6 +532,19 @@
         const clrBtn = document.getElementById('clearPersistBtn');
         const expLS = document.getElementById('exportLSBtn');
         const clrLS = document.getElementById('clearLSBtn');
+        const refreshBtn = document.getElementById('refreshInfoBtn');
+
+        // Refresh button - re-render the info tab
+        if (refreshBtn) refreshBtn.onclick = function () {
+            try {
+                renderInfoTab();
+                if (typeof showAlertBanner === 'function') {
+                    showAlertBanner('Refreshed', 'Info tab updated', 'success', 1500);
+                }
+            } catch (e) {
+                console.warn('refreshInfo failed', e);
+            }
+        };
 
         if (expBtn) expBtn.onclick = function () {
             try {

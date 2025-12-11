@@ -77,8 +77,9 @@ function setPersistHistoryEnabled(val) {
     b.style.position = 'fixed';
     b.style.left = '12px';
     b.style.top = '12px';
-    b.style.zIndex = 3000;
+    b.style.zIndex = '3000';
     b.style.maxWidth = 'min(600px, 90vw)';
+    b.style.pointerEvents = 'none'; // Don't block clicks on elements below
     document.body.appendChild(b);
 })();
 
@@ -100,7 +101,13 @@ function showAlertBanner(title, message, type = 'info', timeout = 1500) {
         const maxVisible = maxEl ? (parseInt(maxEl.value, 10) || 0) : 3;
         if (compactEnabled && (maxVisible <= 0 || container.children.length >= maxVisible)) {
             // store suppressed alert in buffer, still record in Alerts tab and optionally play sound/webhook
-            try { hiddenAlertBuffer.push({ title, message, type, ts: Date.now() }); } catch (e) { }
+            try { 
+                hiddenAlertBuffer.push({ title, message, type, ts: Date.now() }); 
+                // Limit buffer size to prevent memory leak
+                if (hiddenAlertBuffer.length > 200) {
+                    hiddenAlertBuffer.shift();
+                }
+            } catch (e) { }
             try { if (alertState.sound) { _alertAudio.currentTime = 0; _alertAudio.play().catch(() => { }); } } catch (e) { }
             try { let coin = null; if (typeof title === 'string' && title.indexOf('—') !== -1) coin = title.split('—')[0].trim(); addAlertToTab(coin, message, type, Date.now()); } catch (e) { }
             return;
@@ -112,6 +119,7 @@ function showAlertBanner(title, message, type = 'info', timeout = 1500) {
     el.style.cursor = 'pointer';
     el.style.opacity = '0.98';
     el.style.backdropFilter = 'blur(6px)';
+    el.style.pointerEvents = 'auto'; // Make individual alerts clickable
     if (type === 'danger') el.classList.add('alert-danger');
     else if (type === 'warning') el.classList.add('alert-warning');
     else el.classList.add('alert-info');
@@ -382,15 +390,82 @@ try { if (typeof renderAlertRules === 'function') renderAlertRules(); } catch (e
 
 // --- Persistence (LocalStorage) helpers ---
 const PERSIST_KEY = 'okx_calc_history_v1';
-const MAX_HISTORY = 500; // keep up to this many points per coin
+const MAX_HISTORY = 300; // keep up to this many points per coin (reduced for quota)
+const MAX_COINS_STORED = 100; // max coins to keep in storage
 const _lastSaveAt = {};
+
+// In-memory cache to avoid repeated JSON parsing
+let _storeCache = null;
+let _storeCacheLoaded = false;
+let _pendingSave = false;
+
+function getStoreCache() {
+    if (!_storeCacheLoaded) {
+        try {
+            _storeCache = JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}');
+        } catch (e) {
+            _storeCache = {};
+        }
+        _storeCacheLoaded = true;
+    }
+    return _storeCache || {};
+}
+
+// Prune in-memory cache periodically to prevent memory leak
+const MAX_CACHE_SIZE_BYTES = 30 * 1024 * 1024; // 30MB limit for in-memory cache
+let _lastCachePrune = 0;
+
+function pruneCacheIfNeeded() {
+    const now = Date.now();
+    // Only check every 2 minutes
+    if (now - _lastCachePrune < 120000) return;
+    _lastCachePrune = now;
+    
+    try {
+        const cacheStr = JSON.stringify(_storeCache || {});
+        const cacheSize = cacheStr.length * 2; // Approximate bytes (UTF-16)
+        
+        if (cacheSize > MAX_CACHE_SIZE_BYTES) {
+            console.warn('[Storage] Cache size', Math.round(cacheSize / 1024 / 1024), 'MB exceeded limit, pruning...');
+            _storeCache = pruneStorageForQuota(_storeCache, 2);
+        }
+    } catch (e) {
+        console.warn('[Storage] Cache prune check failed', e);
+    }
+}
+
+// Start periodic cache pruning
+setInterval(pruneCacheIfNeeded, 5 * 60 * 1000); // Every 5 minutes
 
 function loadPersistedHistory(coin) {
     try {
-        const store = JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}');
+        const store = getStoreCache();
         const arr = store && store[coin] ? store[coin] : [];
         return Array.isArray(arr) ? arr.slice(-MAX_HISTORY) : [];
     } catch (e) { console.warn('loadPersistedHistory error', e); return []; }
+}
+
+function pruneStorageForQuota(store, aggressiveLevel = 1) {
+    // aggressiveLevel: 1 = light prune, 2 = medium, 3 = heavy
+    const coins = Object.keys(store);
+    const keepPerCoin = Math.max(50, Math.floor(MAX_HISTORY / aggressiveLevel));
+    
+    // Sort coins by last update (newest first) based on last entry timestamp
+    const coinsByRecency = coins.map(c => {
+        const arr = store[c];
+        const lastTs = Array.isArray(arr) && arr.length > 0 ? (arr[arr.length - 1].ts || 0) : 0;
+        return { coin: c, lastTs };
+    }).sort((a, b) => b.lastTs - a.lastTs);
+    
+    // Keep only top N coins
+    const maxCoins = Math.max(20, Math.floor(MAX_COINS_STORED / aggressiveLevel));
+    const coinsToKeep = coinsByRecency.slice(0, maxCoins).map(x => x.coin);
+    
+    const prunedStore = {};
+    for (const coin of coinsToKeep) {
+        prunedStore[coin] = (store[coin] || []).slice(-keepPerCoin);
+    }
+    return prunedStore;
 }
 
 function savePersistedHistory(coin, arr) {
@@ -399,9 +474,46 @@ function savePersistedHistory(coin, arr) {
         const now = Date.now();
         if (_lastSaveAt[coin] && (now - _lastSaveAt[coin]) < 5000) return; // throttle 5s
         _lastSaveAt[coin] = now;
-        const store = JSON.parse(localStorage.getItem(PERSIST_KEY) || '{}');
+        
+        // Update in-memory cache only (fast, non-blocking)
+        const store = getStoreCache();
         store[coin] = arr.slice(-MAX_HISTORY);
-        localStorage.setItem(PERSIST_KEY, JSON.stringify(store));
+        _storeCache = store;
+        
+        // Schedule async save to localStorage (non-blocking)
+        if (!_pendingSave) {
+            _pendingSave = true;
+            const saveToStorage = () => {
+                _pendingSave = false;
+                try {
+                    localStorage.setItem(PERSIST_KEY, JSON.stringify(_storeCache));
+                } catch (quotaErr) {
+                    if (quotaErr.name === 'QuotaExceededError') {
+                        console.warn('Storage quota exceeded, pruning history...');
+                        for (let level = 1; level <= 3; level++) {
+                            try {
+                                _storeCache = pruneStorageForQuota(_storeCache, level);
+                                localStorage.setItem(PERSIST_KEY, JSON.stringify(_storeCache));
+                                console.log(`Storage pruned at level ${level}`);
+                                return;
+                            } catch (e2) {
+                                if (level === 3) {
+                                    console.warn('Heavy prune failed, clearing all history');
+                                    localStorage.removeItem(PERSIST_KEY);
+                                    _storeCache = {};
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            // Use requestIdleCallback if available, else setTimeout
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(saveToStorage, { timeout: 2000 });
+            } else {
+                setTimeout(saveToStorage, 100);
+            }
+        }
     } catch (e) { console.warn('savePersistedHistory error', e); }
 }
 
@@ -430,6 +542,23 @@ try {
         } catch (e) { console.warn('persist label wiring failed', e); }
     }
 } catch (e) { console.warn('persist toggle wiring failed', e); }
+
+// Wire clear storage button
+try {
+    const clearBtn = document.getElementById('clearStorageBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            try {
+                localStorage.removeItem(PERSIST_KEY);
+                window._preloadedHistory = {};
+                _storeCache = {};
+                _storeCacheLoaded = true;
+                console.log('History storage cleared');
+                alert('✅ History storage cleared! Data akan mulai fresh.');
+            } catch (e) { console.warn('Clear storage failed', e); }
+        });
+    }
+} catch (e) { console.warn('wiring clear storage failed', e); }
 
 // expose selected helpers globally
 window.showAlertBanner = showAlertBanner;

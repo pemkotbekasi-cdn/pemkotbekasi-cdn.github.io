@@ -8,6 +8,23 @@ body {
     position: relative;
 }
 
+/* Ensure all tab panes have consistent positioning */
+.tab-content > .tab-pane {
+    padding-top: 8px !important;
+    margin-top: 0 !important;
+}
+
+/* Ensure tables start at consistent position */
+.tab-pane .table-responsive {
+    margin-top: 0;
+}
+
+/* Minimal spacing for elements above tables */
+.tab-pane > .d-flex,
+.tab-pane > small {
+    margin-bottom: 4px !important;
+}
+
 body::before {
     content: '';
     position: fixed;
@@ -318,4 +335,24 @@ body * {
 #summaryBody tr {
     position: relative;
     z-index: 2;
+}
+
+/* Ensure all form controls are clickable */
+.form-select,
+.form-control,
+select,
+input,
+button,
+.btn,
+.form-check-input,
+label {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 10;
+}
+
+/* Ensure row container allows clicks */
+.row {
+    position: relative;
+    z-index: 5;
 }

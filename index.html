@@ -46,10 +46,11 @@
                     value="5">
             </div>
             <div class="col-md-4 d-flex align-items-end">
-                <div class="form-check form-switch">
+                <div class="form-check form-switch me-3">
                     <input class="form-check-input" type="checkbox" id="persistHistoryToggle" checked>
-                    <label class="form-check-label" for="persistHistoryToggle">💾 Persist History (LocalStorage)</label>
+                    <label class="form-check-label" for="persistHistoryToggle">💾 Persist History</label>
                 </div>
+                <button class="btn btn-sm btn-outline-danger" id="clearStorageBtn" title="Clear stored history to free up space">🗑️ Clear</button>
             </div>
             <div class="col-md-4 d-flex align-items-end">
                 <div>
@@ -61,143 +62,9 @@
                         %</span></label>
                 <div class="form-text small text-muted">Note: feed no longer provides separate per-trade counts —
                     "Activity" sorts use volume as a proxy.</div>
-                <select class="form-select" id="sortBy">
-                    <optgroup label="🔥 Flow Pressure (Vol Ratio)">
-                        <option value="vol_ratio_1m">📊 Vol Ratio % (1m) - Ultra short-term flow</option>
-                        <option value="vol_ratio_5m">📊 Vol Ratio % (5m) - Micro bursts</option>
-                        <option value="vol_ratio_10m">📊 Vol Ratio % (10m) - Short swings</option>
-                        <option value="vol_ratio_15m">📊 Vol Ratio % (15m) - Session scout</option>
-                        <option value="vol_ratio_20m">📊 Vol Ratio % (20m) - Pre-breakout check</option>
-                        <option value="vol_ratio_30m">📊 Vol Ratio % (30m) - Intraday pulse</option>
-                        <option value="vol_ratio_1h">📊 Vol Ratio % (1h) - Hourly trend</option>
-                        <option value="vol_ratio">📊 Vol Ratio % (2h) - BUY/SELL Pressure ⭐</option>
-                        <option value="vol_ratio_24h">📊 Vol Ratio % (24h) - Macro bias</option>
-                    </optgroup>
-                    <optgroup label="📈 Durability">
-                        <option value="vol_durability">⚖️ Vol Durability Score (2h)</option>
-                        <option value="activity_dur_2h">% Activity Durability (2h, vol proxy)</option>
-                    </optgroup>
-                    <optgroup label="💰 Price & Change">
-                        <option value="change">% Change</option>
-                        <option value="price">Price</option>
-                        <option value="price_position" selected>Price Position (0-100)</option>
-                        <option value="recommendation">Recommendation Score</option>
-                    </optgroup>
-
-
-                    <optgroup label="💥 Volume (1m)">
-                        <option value="vol_buy_1m">Vol Buy (1m)</option>
-                        <option value="vol_sell_1m">Vol Sell (1m)</option>
-                        <option value="vol_total_1m">Vol Total (1m)</option>
-                        <option value="avg_vol_buy_1m">Avg Vol Buy (1m)</option>
-                        <option value="avg_vol_sell_1m">Avg Vol Sell (1m)</option>
-                    </optgroup>
-
-                    <optgroup label="💹 Volume (5m)">
-                        <option value="vol_buy_5m">Vol Buy (5m)</option>
-                        <option value="vol_sell_5m">Vol Sell (5m)</option>
-                        <option value="vol_total_5m">Vol Total (5m)</option>
-                        <option value="avg_vol_buy_5m">Avg Vol Buy (5m)</option>
-                        <option value="avg_vol_sell_5m">Avg Vol Sell (5m)</option>
-                    </optgroup>
-
-                    <optgroup label="💹 Volume (10m)">
-                        <option value="vol_buy_10m">Vol Buy (10m)</option>
-                        <option value="vol_sell_10m">Vol Sell (10m)</option>
-                        <option value="vol_total_10m">Vol Total (10m)</option>
-                        <option value="avg_vol_buy_10m">Avg Vol Buy (10m)</option>
-                        <option value="avg_vol_sell_10m">Avg Vol Sell (10m)</option>
-                    </optgroup>
-
-
-                    <optgroup label="💹 Volume (15m)">
-                        <option value="vol_buy_15m">Vol Buy (15m)</option>
-                        <option value="vol_sell_15m">Vol Sell (15m)</option>
-                        <option value="vol_total_15m">Vol Total (15m)</option>
-                        <option value="avg_vol_buy_15m">Avg Vol Buy (15m)</option>
-                        <option value="avg_vol_sell_15m">Avg Vol Sell (15m)</option>
-                    </optgroup>
-
-
-                    <optgroup label="💹 Volume (20m)">
-                        <option value="vol_buy_20m">Vol Buy (20m)</option>
-                        <option value="vol_sell_20m">Vol Sell (20m)</option>
-                        <option value="vol_total_20m">Vol Total (20m)</option>
-                        <option value="avg_vol_buy_20m">Avg Vol Buy (20m)</option>
-                        <option value="avg_vol_sell_20m">Avg Vol Sell (20m)</option>
-                    </optgroup>
-
-
-                    <optgroup label="💰 Volume (30m)">
-                        <option value="vol_buy_30m">Vol Buy (30m)</option>
-                        <option value="vol_sell_30m">Vol Sell (30m)</option>
-                        <option value="vol_total_30m">Vol Total (30m)</option>
-                        <option value="avg_vol_buy_30m">Avg Vol Buy (30m)</option>
-                        <option value="avg_vol_sell_30m">Avg Vol Sell (30m)</option>
-                    </optgroup>
-
-
-                    <optgroup label="📊 Volume (1h)">
-                        <option value="vol_buy_1h">Vol Buy (1h)</option>
-                        <option value="vol_sell_1h">Vol Sell (1h)</option>
-                        <option value="vol_total_1h">Vol Total (1h)</option>
-                        <option value="avg_vol_buy_1h">Avg Vol Buy (1h)</option>
-                        <option value="avg_vol_sell_1h">Avg Vol Sell (1h)</option>
-                    </optgroup>
-
-
-                    <optgroup label="📈 Volume (2h)">
-                        <option value="vol_buy_2h">Vol Buy (2h)</option>
-                        <option value="vol_sell_2h">Vol Sell (2h)</option>
-                        <option value="vol_total_2h">Vol Total (2h)</option>
-                        <option value="avg_vol_buy_2h">Avg Vol Buy (2h)</option>
-                        <option value="avg_vol_sell_2h">Avg Vol Sell (2h)</option>
-                    </optgroup>
-                    <optgroup label="📊 Sum Durability">
-                        <option value="sum_min_1_buy">Sum Min 1 Buy</option>
-                        <option value="sum_min_5_buy">Sum Min 5 Buy</option>
-                        <option value="sum_min_10_buy">Sum Min 10 Buy</option>
-                        <option value="sum_min_15_buy">Sum Min 15 Buy</option>
-                        <option value="sum_min_20_buy">Sum Min 20 Buy</option>
-                        <option value="sum_min_30_buy">Sum Min 30 Buy</option>
-                        <option value="sum_min_60_buy">Sum Min 60 Buy</option>
-                        <option value="sum_min_120_buy">Sum Min 120 Buy</option>
-                        <option value="sum_overall_buy">Sum Overall Buy</option>
-                    </optgroup>
-                    <option value="risk_score">⚖️ Risk Score</option>
-                    <optgroup label="💰 Volume Durability">
-                        <option value="vol_durability_1m">⚖️ Vol Durability (1m)</option>
-                        <option value="vol_durability_5m">⚖️ Vol Durability (5m)</option>
-                        <option value="vol_durability_10m">⚖️ Vol Durability (10m)</option>
-                        <option value="vol_durability_15m">⚖️ Vol Durability (15m)</option>
-                        <option value="vol_durability_20m">⚖️ Vol Durability (20m)</option>
-                        <option value="vol_durability_30m">⚖️ Vol Durability (30m)</option>
-                        <option value="vol_durability_60m">⚖️ Vol Durability (60m)</option>
-                        <option value="vol_durability">⚖️ Vol Durability (120m)</option>
-                        <option value="vol_durability_24h">⚖️ Vol Durability (24h)</option>
-                    </optgroup>
-                    <optgroup label="📈 Change Variations">
-                        <option disabled class="text-muted">Detailed change metrics not available from feed</option>
-                    </optgroup>
-                    <optgroup label="⏰ Update Times">
-                        <option value="update_activity">Update Time Activity</option>
-                        <option value="update_sum">Update Time Sum</option>
-                        <option value="update_general">Update Time General</option>
-                    </optgroup>
-                    <optgroup label="💵 Total Volumes">
-                        <option value="total_vol_fiat">Total Vol Fiat</option>
-                        <option value="total_vol">Total Volume</option>
-                    </optgroup>
-                    <optgroup label="⚡ Delay">
-                        <option value="delay_ms">Delay MS</option>
-                    </optgroup>
-                    <optgroup label="🌟 Overall (24h)">
-                        <option value="activity_dur_24h">% Activity Durability (24h, vol proxy)</option>
-                        <option value="vol_dur_24h">% Vol Durability (24h)</option>
-                        <option value="vol_buy_24h">Vol Buy (24h)</option>
-                        <option value="vol_sell_24h">Vol Sell (24h)</option>
-                        <option value="vol_total_24h">Vol Total (24h)</option>
-                    </optgroup>
+                <select class="form-select" id="sortBy" style="position: relative; z-index: 9999; pointer-events: auto !important;">
+                    <!-- Options loaded dynamically from js/data/sort-options.json -->
+                    <option value="price_position" selected>Loading...</option>
                 </select>
             </div>
             <div class="col-md-4">
@@ -233,6 +100,11 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
             <p>Connecting to WebSocket...</p>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span id="wsStatus" class="badge bg-warning">🟡 Connecting...</span>
+            <small class="text-muted" id="lastUpdateTime"></small>
         </div>
 
         <ul class="nav nav-tabs" id="dataTabs" role="tablist">
@@ -292,25 +164,30 @@
                 <button class="nav-link" id="spike-tab" data-bs-toggle="tab" data-bs-target="#spikes" type="button"
                     role="tab">⚡ Spikes</button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="freq-tab" data-bs-toggle="tab" data-bs-target="#frequency" type="button"
+                    role="tab">📊 Frequency</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="freqratio-tab" data-bs-toggle="tab" data-bs-target="#freqRatio" type="button"
+                    role="tab">📈 Freq Ratio</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="smart-tab" data-bs-toggle="tab" data-bs-target="#smartAnalysis" type="button"
+                    role="tab">🧠 Smart</button>
+            </li>
         </ul>
 
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="d-flex justify-content-center">
-                    <button class="btn btn-outline-success me-2" onclick="quickSort('vol_ratio')">
+        <div class="tab-content mt-2" id="dataTabsContent">
+            <div class="tab-pane fade show active" id="summary" role="tabpanel">
+                <div class="d-flex justify-content-center" style="margin-bottom: 4px;">
+                    <button class="btn btn-outline-success btn-sm me-2" onclick="quickSort('vol_ratio')">
                         🚀 Quick Sort: Vol Ratio %
                     </button>
-                    <button class="btn btn-outline-info" onclick="showVolRatioInfo()">
+                    <button class="btn btn-outline-info btn-sm" onclick="showVolRatioInfo()">
                         📚 Learn About Vol Ratio %
                     </button>
                 </div>
-            </div>
-        </div>
-
-
-
-        <div class="tab-content mt-4" id="dataTabsContent">
-            <div class="tab-pane fade show active" id="summary" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-striped" id="summaryTable">
                         <thead>
@@ -456,589 +333,31 @@
             </div>
 
             <div class="tab-pane fade" id="info" role="tabpanel">
+                <!-- Runtime status rendered by info-tab.js -->
                 <div id="infoRuntime" class="mb-3"></div>
+                
+                <!-- Documentation rendered from JSON by info-tab.js -->
+                <div id="infoDocsContainer" class="mb-3"></div>
+                
+                <!-- Alert Controls - keep these as they're interactive -->
                 <div class="card bg-dark text-light mb-3">
                     <div class="card-body">
-                        <h5 class="text-info">✨ Fitur Tersedia / Available Features</h5>
-                        <ul class="small mb-2">
-                            <li><strong>Live feed:</strong> WebSocket client + Redis bridge (subscribe → wss) untuk data
-                                real-time.</li>
-                            <li><strong>Summary:</strong> Tabel ringkasan per-coin, klik baris untuk membuka Insight.
-                            </li>
-                            <li><strong>Recommendations (Recs):</strong> Per-timeframe (1m/5m/10m/30m/60m/120m/24h) dan
-                                opsi <em>All</em> (konsensus antar-timeframe).</li>
-                            <li><strong>TP/SL Controls:</strong> Atur TP% min/max, SL% max, dan sensitivitas; opsi
-                                ATR-based TP/SL tersedia.</li>
-                            <li><strong>Volume & Vol Dur:</strong> Lihat buy/sell volume multi-timeframe dan durability
-                                metrics.</li>
-                            <li><strong>Spike Detection:</strong> Deteksi lonjakan volume vs rata-rata per-timeframe.
-                            </li>
-                            <li><strong>Alerts:</strong> Banner alerts, webhook test, sound toggle, dan mode compact
-                                untuk membatasi tampilan.</li>
-                            <li><strong>Insight Export:</strong> Export data coin ke JSON/CSV dari modal Insight.</li>
-                            <li><strong>UI behavior:</strong> Debounced updates, delegated row clicks, and deterministic
-                                recommendations (sorting/preview do not mutate state).</li>
-                            <li><strong>Local Dev:</strong> Docker Compose included — runs Redis + example services
-                                (bridge/publisher/aggregator/count/generateavg). GenerateAvg scheduled in compose for
-                                periodic averages.</li>
-                        </ul>
-                        <p class="small text-white-50 mb-0">Tip singkat: gunakan tab <strong>Recs</strong> untuk memilih
-                            timeframe lalu periksa Summary agar nilainya konsisten. Untuk reproducibility, consider
-                            moving heavy analytics server-side.</p>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h4 class="text-info mb-3">📊 <strong>Summary Tab - Kolom Utama</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <div class="d-flex gap-2 mb-3 align-items-center">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="compactAlertsToggle">
-                                        <label class="form-check-label small" for="compactAlertsToggle">Compact banners
-                                            (limit visible alerts)</label>
-                                    </div>
-                                    <div class="input-group input-group-sm" style="width:140px;">
-                                        <span class="input-group-text">Max</span>
-                                        <input type="number" id="maxAlertBanners" class="form-control" value="3"
-                                            min="0">
-                                    </div>
-                                    <div>
-                                        <button id="showHiddenAlertsBtn" class="btn btn-sm btn-outline-secondary">Show
-                                            hidden alerts</button>
-                                    </div>
-                                </div>
-                                <h6 class="card-title text-warning">Coin</h6>
-                                <p class="card-text small">Nama cryptocurrency (BTC, ETH, dll)</p>
-
-                                <h6 class="card-title text-warning">💰 Price</h6>
-                                <p class="card-text small">Harga terakhir dalam USD</p>
-
-                                <h6 class="card-title text-warning">📊 Change %</h6>
-                                <p class="card-text small">Persentase perubahan harga dalam periode terakhir</p>
-
-                                <h6 class="card-title text-warning">📍 Price Pos</h6>
-                                <p class="card-text small">Posisi harga dalam range High-Low (0-100). 0 = di Low, 100 =
-                                    di High</p>
-
-                                <h6 class="card-title text-warning">🎯 Recommendation</h6>
-                                <p class="card-text small">Rekomendasi BUY/SELL/HOLD berdasarkan algoritma AI dengan
-                                    tingkat confidence</p>
+                        <h5 class="text-info mb-3">🔔 Alert Controls</h5>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="compactAlertsToggle">
+                                <label class="form-check-label small" for="compactAlertsToggle">Compact banners</label>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <h4 class="text-info mb-3">⚖️ <strong>Durability Metrics</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <h6 class="card-title text-success">⚖️ Activity Dur (2h, vol proxy)</h6>
-                                <p class="card-text small">Activity Durability 2 jam - Konsistensi aktivitas trading
-                                    (volume digunakan sebagai proxy untuk frekuensi)</p>
-
-                                <h6 class="card-title text-success">⚖️ Vol Dur (1m/5m/10m/15m/20m/30m/1h/24h)</h6>
-                                <p class="card-text small">Volume Durability - Kekuatan volume pembelian dalam timeframe
-                                    tertentu</p>
-
-                                <div class="mt-2">
-                                    <span class="badge bg-success me-1">67-100%</span><small>Excellent</small><br>
-                                    <span class="badge bg-warning me-1">34-66%</span><small>Good</small><br>
-                                    <span class="badge bg-danger me-1">0-33%</span><small>Poor</small>
-                                </div>
+                            <div class="input-group input-group-sm" style="width:120px;">
+                                <span class="input-group-text">Max</span>
+                                <input type="number" id="maxAlertBanners" class="form-control" value="3" min="0">
                             </div>
+                            <button id="showHiddenAlertsBtn" class="btn btn-sm btn-outline-secondary">Show hidden</button>
+                            <button id="openRecsBtn" class="btn btn-sm btn-outline-primary">Open Recs</button>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h4 class="text-info mb-3">🧠 <strong>Microstructure Metrics</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <h6 class="card-title text-warning">Cohesion Index</h6>
-                                        <p class="card-text small">0-100 skor yang mengukur keselarasan harga, volume beli,
-                                            dan frekuensi order. Nilai tinggi berarti buyer mendominasi di banyak lapisan
-                                            data secara konsisten.</p>
-
-                                        <h6 class="card-title text-warning">Acc Vol (Aggressive Volume)</h6>
-                                        <p class="card-text small">Akumulasi delta volume agresif (market buy vs sell)
-                                            yang sudah disejajarkan dengan ukuran coin. Membantu melihat apakah tekanan
-                                            beli/ jual bertahan lebih lama dari satu spike.</p>
-
-                                        <h6 class="card-title text-warning">FBI (Frequency Burst Index)</h6>
-                                        <p class="card-text small">Perbandingan frekuensi buy super-pendek (1m/5m)
-                                            terhadap baseline 2h. >1.0 berarti sedang terjadi burst transaksi inbound.</p>
-
-                                        <h6 class="card-title text-warning">OFSI (Order Flow Stability)</h6>
-                                        <p class="card-text small">Mengukur seberapa stabil arus order agresif. Nilai tinggi
-                                            berarti noise rendah dan partisipasi besar bergerak teratur.</p>
-
-                                        <h6 class="card-title text-warning">FSI (Flow Strength Index)</h6>
-                                        <p class="card-text small">Gabungan tekanan buy vs sell lintas timeframe untuk
-                                            menghasilkan skor kekuatan arus modal. >70 biasanya berarti buyer dominan.</p>
-
-                                        <h6 class="card-title text-warning">Z-Press (Z-Weighted Pressure)</h6>
-                                        <p class="card-text small">Z-score (standarisasi statistik) dari delta volume dan
-                                            frekuensi. Digunakan untuk mengidentifikasi pergerakan yang benar-benar
-                                            signifikan, bukan sekadar karena volatilitas tinggi.</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="card-title text-info">TIM (Trade Imbalance Momentum)</h6>
-                                        <p class="card-text small">Momentum perubahan imbalance (buy - sell) antar block
-                                            waktu. Positif meningkat → buyer mengambil alih, negatif tajam → distribusi.</p>
-
-                                        <h6 class="card-title text-info">CIS (Composite Institutional Signal)</h6>
-                                        <p class="card-text small">Skor akhir (0-100) yang merangkum Cohesion, FSI, FBI,
-                                            TIM, dan Liquidity Shock. Cocok untuk membaca positioning pemain besar.</p>
-
-                                        <h6 class="card-title text-info">LSI (Liquidity Shock Index)</h6>
-                                        <p class="card-text small">Mendeteksi lonjakan atau hilangnya likuiditas bid/ask
-                                            melalui ATR + spread delta. Nilai ekstrem mengindikasikan kemungkinan
-                                            breakout atau slippage besar.</p>
-
-                                        <h6 class="card-title text-info">Range Comp (Range Compression)</h6>
-                                        <p class="card-text small">Perbandingan ATR aktual dengan rentang harga real-time.
-                                            Angka rendah = squeeze/kompresi (potensi ledakan), tinggi = market melebar.</p>
-
-                                        <h6 class="card-title text-info">PFCI (Price-Flow Conflict)</h6>
-                                        <p class="card-text small">Indeks konflik antara arah harga dan order flow. Nilai
-                                            positif tinggi = harga turun tapi aliran buy kuat (potensi reversal). Negatif
-                                            tinggi = harga naik tapi seller dominan (false breakout).</p>
-
-                                        <div class="alert alert-dark text-light border border-warning border-opacity-50 small mb-0">
-                                            <strong>Tips:</strong> padukan Cohesion + CIS untuk screening cepat,
-                                            lalu cek LSI/Range Comp untuk timing entry. Gunakan PFCI sebagai filter risiko
-                                            kontra-trend.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <h4 class="text-info mb-3">📊 <strong>Volume Tab</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <h6 class="card-title text-info">📊 Buy/Sell 1m, 5m, 10m, 60m, 120m</h6>
-                                <p class="card-text small">Volume pembelian/penjualan dalam satuan coin</p>
-
-                                <h6 class="card-title text-info">📊 Total</h6>
-                                <p class="card-text small">Total volume trading (Buy + Sell)</p>
-
-                                <h6 class="card-title text-info">💵 Avg Vol Buy/Sell</h6>
-                                <p class="card-text small">Rata-rata volume trading per periode waktu</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <h4 class="text-info mb-3">🎯 <strong>Recommendation Algorithm</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <h6 class="text-success">🟢 BUY (≥60% confidence)</h6>
-                                        <ul class="small">
-                                            <li>Harga dekat level Low (Price Pos ≤33%)</li>
-                                            <li>Momentum harga turun signifikan (<-5%)< /li>
-                                            <li>Volume Durability tinggi (≥67%)</li>
-                                            <li>Activity Durability tinggi (vol proxy) (≥67%)</li>
-                                            <li><strong>Volume Buy 2x > Volume Sell (ratio >2.0)</strong></li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-danger">🔴 SELL (≥60% confidence)</h6>
-                                        <ul class="small">
-                                            <li>Harga dekat level High (Price Pos ≥67%)</li>
-                                            <li>Momentum harga naik signifikan (>5%)</li>
-                                            <li>Volume Durability rendah (≤33%)</li>
-                                            <li>Activity Durability rendah (vol proxy) (≤33%)</li>
-                                            <li><strong>Volume Sell 2x > Volume Buy (ratio <0.5)< /strong>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <h6 class="text-warning">🟡 HOLD (<60% confidence)</h6>
-                                                <ul class="small">
-                                                    <li>Kondisi pasar netral/mixed</li>
-                                                    <li>Tidak ada sinyal kuat BUY atau SELL</li>
-                                                    <li>Perlu monitoring lebih lanjut</li>
-                                                </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h4 class="text-info mb-3">⚖️ <strong>Faktor Rekomendasi & Bobot</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6 class="text-primary">📍 Posisi Harga (25%)</h6>
-                                        <p class="small mb-2">Posisi harga saat ini dalam range High-Low</p>
-
-                                        <h6 class="text-primary">📈 Momentum Harga (15%)</h6>
-                                        <p class="small mb-2">Perubahan persentase harga terkini</p>
-
-                                        <h6 class="text-primary">💹 Durabilitas Volume 2h (12%)</h6>
-                                        <p class="small mb-2">Konsistensi volume beli dalam 2 jam</p>
-
-                                        <h6 class="text-primary">🔄 Durabilitas Frekuensi 2h (12%)</h6>
-                                        <p class="small mb-2">Konsistensi frekuensi transaksi beli</p>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="text-success">📊 Rasio Volume Buy/Sell (25%)</h6>
-                                        <p class="small mb-2"><strong>FAKTOR PENTING:</strong> Perbandingan volume beli
-                                            vs jual</p>
-
-                                        <h6 class="text-primary">📅 Durabilitas 24h (8%)</h6>
-                                        <p class="small mb-2">Konsistensi volume dalam 24 jam</p>
-
-                                        <h6 class="text-primary">⚡ Momentum vs Rata-rata (3%)</h6>
-                                        <p class="small mb-2">Volume terkini vs rata-rata historis</p>
-
-                                        <div class="alert alert-info small mt-3">
-                                            <strong>💡 Update:</strong> Bobot Volume Ratio dinaikkan dari 10% ke 25%
-                                            karena lebih mencerminkan tekanan beli/jual sesungguhnya
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <h4 class="text-info mb-3">📊 <strong>Data Lainnya</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <h6 class="card-title text-info">💵 Total Vol</h6>
-                                <p class="card-text small">Total volume dalam fiat currency</p>
-
-                                <h6 class="card-title text-info">⏰ Update</h6>
-                                <p class="card-text small">Waktu terakhir data diupdate</p>
-
-                                <h6 class="card-title text-info">📈 Activity Buy/Sell (2h, vol proxy)</h6>
-                                <p class="card-text small">Aktivitas buy/sell dalam 2 jam terakhir (volume digunakan
-                                    sebagai proxy untuk frekuensi)</p>
-
-                                <h6 class="card-title text-info">📊 Vol Buy/Sell (2h)</h6>
-                                <p class="card-text small">Volume buy/sell dalam 2 jam terakhir</p>
-
-                                <h6 id="volRatioSection" class="card-title text-success">📊 Vol Ratio %</h6>
-                                <div class="card-text small">
-                                    <strong>Rasio Volume Buy vs Sell dalam skala 100%</strong><br>
-                                    <strong>Formula:</strong> (Volume Buy ÷ Volume Sell) × 100%<br><br>
-
-                                    <strong>📈 Interpretasi:</strong><br>
-                                    • <strong>500%+</strong>: Ekstrem bullish - Buy volume 5x lebih besar<br>
-                                    • <strong>200-500%</strong>: Sangat bullish - Buy volume 2-5x lebih besar<br>
-                                    • <strong>150-200%</strong>: Bullish moderat - Buy volume 1.5-2x lebih besar<br>
-                                    • <strong>80-150%</strong>: Sedikit bullish - Buy volume lebih dominan<br>
-                                    • <strong>50-80%</strong>: Netral - Rasio seimbang<br>
-                                    • <strong>20-50%</strong>: Bearish moderat - Sell volume lebih dominan<br>
-                                    • <strong>0-20%</strong>: Sangat bearish - Sell volume mendominasi<br><br>
-
-                                    <strong>🎯 Trading Signals:</strong><br>
-                                    • <strong>🟢 >200%</strong>: Strong BUY signal - Institutional buying<br>
-                                    • <strong>🟡 50-200%</strong>: HOLD - Market balance<br>
-                                    • <strong>🔴 <50%< /strong>: Strong SELL signal - Distribution phase<br><br>
-
-                                            <strong>⚠️ Special Cases:</strong><br>
-                                            • <strong>999%</strong>: Only BUY volume (no SELL)<br>
-                                            • <strong>0%</strong>: Only SELL volume (no BUY)<br>
-                                            • <strong>100%</strong>: Perfect balance<br><br>
-
-                                            <strong>📊 Data Source:</strong> count_VOL_minute_120_buy vs
-                                            count_VOL_minute_120_sell
-                                </div>
-
-                                <h6 class="card-title text-info mt-3">📊 Vol Buy/Sell (24h)</h6>
-                                <p class="card-text small"><strong>Volume buy/sell dalam 24 jam terakhir</strong><br>
-                                    Berguna untuk melihat tren jangka panjang dan perbandingan dengan volume 2 jam<br>
-                                    <strong>Data Source:</strong> count_VOL_minute_1440_buy vs
-                                    count_VOL_minute_1440_sell
-                                </p>
-
-                                <h6 class="card-title text-warning mt-3">🎯 Dampak pada Rekomendasi</h6>
-                                <div class="card-text small">
-                                    <strong>Volume Ratio mempengaruhi algoritma rekomendasi dengan bobot
-                                        25%:</strong><br>
-                                    <strong>Menggunakan data 2 jam terakhir untuk sinyal real-time</strong><br><br>
-
-                                    <strong>📈 BUY Signals Enhanced:</strong><br>
-                                    • Ratio >200% (+25 poin BUY)<br>
-                                    • Ratio >150% (+15 poin BUY)<br><br>
-
-                                    <strong>📉 SELL Signals Enhanced:</strong><br>
-                                    • Ratio <50% (+25 poin SELL)<br>
-                                        • Ratio <67% (+15 poin SELL)<br><br>
-
-                                            <strong>💡 Mengapa 2 Jam?</strong><br>
-                                            Volume 2 jam memberikan sinyal yang lebih timely dan relevant untuk trading
-                                            HFT<br>
-                                            Volume 24 jam lebih cocok untuk analisis tren jangka panjang<br><br>
-
-                                            <strong>⚡ Real-time Advantage:</strong><br>
-                                            Volume ratio memberikan sinyal lebih awal daripada perubahan harga karena
-                                            mencerminkan intent pasar sebelum harga bergerak signifikan.
-                                </div>
-
-                                <h6 class="card-title text-info mt-3">📚 Cara Menggunakan Vol Ratio %</h6>
-                                <div class="card-text small">
-                                    <strong>🔥 Scalping Strategy:</strong><br>
-                                    • Cari ratio >300% untuk entry BUY<br>
-                                    • Exit ketika ratio turun ke <150%<br>
-                                        • Stop loss jika ratio <50%<br><br>
-
-                                            <strong>📊 Swing Trading:</strong><br>
-                                            • Monitor perubahan ratio harian<br>
-                                            • Konfirmasi dengan durability metrics<br>
-                                            • Gunakan sebagai filter untuk entry/exit<br><br>
-
-                                            <strong>⚠️ Risk Management:</strong><br>
-                                            • Jangan trading melawan ratio ekstrem<br>
-                                            • Ratio >500% bisa berarti overbought<br>
-                                            • Ratio <20% bisa berarti oversold<br><br>
-
-                                                <strong>🔄 Market Context:</strong><br>
-                                                • Bandingkan dengan rata-rata historis<br>
-                                                • Perhatikan volume total bersamaan<br>
-                                                • Kombinasikan dengan price action<br><br>
-
-                                                <strong>💡 Pro Tips:</strong><br>
-                                                • Ratio mendadak >400% = Institutional buying<br>
-                                                • Ratio konsisten >200% = Strong uptrend<br>
-                                                • Ratio turun ke <100%=Warning signal<br>
-                                                    • Ratio <30%=Potential reversal zone </div>
-
-                                                        <h6 class="card-title text-primary mt-3">🔗 Hubungan dengan
-                                                            Indikator Lain</h6>
-                                                        <div class="card-text small">
-                                                            <strong>📈 Dengan Price Position:</strong><br>
-                                                            • Ratio >200% + Price Pos >67% = Overbought<br>
-                                                            • Ratio <50% + Price Pos <33%=Oversold<br>
-                                                                • Ratio >150% + Price Pos <50%=Accumulation<br><br>
-
-                                                                    <strong>💹 Dengan Durability:</strong><br>
-                                                                    • Ratio >200% + Durability >67% = Strong
-                                                                    conviction<br>
-                                                                    • Ratio >150% + Durability <33%=Weak momentum<br>
-                                                                        • Ratio <50% + Durability>67% =
-                                                                            Distribution<br><br>
-
-                                                                            <strong>📊 Dengan Volume Total:</strong><br>
-                                                                            • High ratio + High volume = Institutional
-                                                                            interest<br>
-                                                                            • High ratio + Low volume = Retail
-                                                                            buying<br>
-                                                                            • Low ratio + High volume = Institutional
-                                                                            selling<br><br>
-
-                                                                            <strong>⚡ Dengan Momentum:</strong><br>
-                                                                            • Ratio >200% + Positive change = Bullish
-                                                                            confirmation<br>
-                                                                            • Ratio <50% + Negative change=Bearish
-                                                                                confirmation<br>
-                                                                                • Ratio neutral + High momentum =
-                                                                                Short-term move<br><br>
-
-                                                                                <strong>🎯 Best
-                                                                                    Combinations:</strong><br>
-                                                                                • Ratio >200% + Durability >67% + Price
-                                                                                Pos <50%=STRONG BUY<br>
-                                                                                    • Ratio <50% + Durability>67% +
-                                                                                        Price Pos >50% = STRONG SELL
-                                                        </div>
-
-                                                        <h6 class="card-title text-danger mt-3">📖 Studi Kasus Volume
-                                                            Ratio</h6>
-                                                        <div class="card-text small">
-                                                            <strong>📈 Kasus 1 - Pump Detection:</strong><br>
-                                                            Ratio tiba-tiba naik dari 80% ke 450% dalam 5 menit<br>
-                                                            Durability turun dari 75% ke 25%<br>
-                                                            <strong>Signal:</strong> Artificial pump - jangan
-                                                            ikut<br><br>
-
-                                                            <strong>📉 Kasus 2 - Institutional
-                                                                Accumulation:</strong><br>
-                                                            Ratio konsisten 180-220% selama 2 jam<br>
-                                                            Durability stabil di 70-80%<br>
-                                                            Volume total meningkat<br>
-                                                            <strong>Signal:</strong> Smart money buying - ikuti
-                                                            trend<br><br>
-
-                                                            <strong>⚡ Kasus 3 - Reversal Signal:</strong><br>
-                                                            Ratio turun dari 250% ke 45% dalam 15 menit<br>
-                                                            Price position masih di 70%<br>
-                                                            <strong>Signal:</strong> Momentum shift - exit long
-                                                            positions<br><br>
-
-                                                            <strong>🔄 Kasus 4 - Sideways Market:</strong><br>
-                                                            Ratio berfluktuasi 90-110% selama berjam-jam<br>
-                                                            Durability rendah di semua timeframe<br>
-                                                            <strong>Signal:</strong> Consolidation - tunggu
-                                                            breakout<br><br>
-
-                                                            <strong>💥 Kasus 5 - Panic Selling:</strong><br>
-                                                            Ratio turun drastis ke 15% dalam waktu singkat<br>
-                                                            Durability melonjak ke 85%<br>
-                                                            <strong>Signal:</strong> Oversold condition - potential
-                                                            bounce<br><br>
-
-                                                            <strong>🎯 Lesson Learned:</strong><br>
-                                                            Volume ratio bukan indikator standalone. Selalu konfirmasi
-                                                            dengan durability, price position, dan volume total untuk
-                                                            sinyal yang lebih akurat.
-                                                        </div>
-
-                                                        <h6 class="card-title text-info mt-3">⚠️ Troubleshooting &
-                                                            Common Mistakes</h6>
-                                                        <div class="card-text small">
-                                                            <strong>🚫 Jangan Salah Interpretasi:</strong><br>
-                                                            • Ratio 300% bukan berarti harga akan naik 3x<br>
-                                                            • Ratio ekstrem bisa berarti thin liquidity<br>
-                                                            • Ratio 100% bukan berarti market netral<br><br>
-
-                                                            <strong>🔍 False Signals:</strong><br>
-                                                            • Market maker manipulation<br>
-                                                            • Low volume periods<br>
-                                                            • News-driven spikes<br>
-                                                            • Coin listing effects<br><br>
-
-                                                            <strong>📊 Validation Steps:</strong><br>
-                                                            1. Check volume total (minimal threshold)<br>
-                                                            2. Verify durability consistency<br>
-                                                            3. Confirm price position alignment<br>
-                                                            4. Look for multi-timeframe confirmation<br>
-                                                            5. Consider market context<br><br>
-
-                                                            <strong>⏰ Time-based Considerations:</strong><br>
-                                                            • Asian session: Lower volume, higher volatility<br>
-                                                            • US session: Higher volume, more reliable signals<br>
-                                                            • Weekend: Thin liquidity, unreliable ratios<br>
-                                                            • Major news: Extreme ratios, high risk<br><br>
-
-                                                            <strong>🎪 Market Manipulation Signs:</strong><br>
-                                                            • Ratio changes >500% in <5 minutes<br>
-                                                                • Durability drops while ratio spikes<br>
-                                                                • Volume total doesn't support the ratio<br>
-                                                                • Opposite signals across timeframes
-                                                        </div>
-
-                                                        <h6 class="card-title text-light mt-3">📈 Monitoring &
-                                                            Development Over Time</h6>
-                                                        <div class="card-text small">
-                                                            <strong>📊 Historical Baseline:</strong><br>
-                                                            • Track ratio selama 24-48 jam untuk baseline<br>
-                                                            • Identifikasi level support/resistance ratio<br>
-                                                            • Catat pola ratio pada timeframe berbeda<br><br>
-
-                                                            <strong>🔄 Ratio Evolution:</strong><br>
-                                                            • Monitor perubahan ratio per 5-15 menit<br>
-                                                            • Cari pola: rising/falling/consolidating<br>
-                                                            • Bandingkan dengan volume total trend<br><br>
-
-                                                            <strong>🎯 Alert Setup:</strong><br>
-                                                            • Alert ketika ratio >300% (strong buy)<br>
-                                                            • Alert ketika ratio <30% (strong sell)<br>
-                                                                • Alert ketika ratio crosses 100%<br><br>
-
-                                                                <strong>📱 Mobile Monitoring:</strong><br>
-                                                                • Focus pada ratio ekstrem (>250% atau <40%)<br>
-                                                                    • Monitor 2-3 coin favorit saja<br>
-                                                                    • Set notifikasi untuk sinyal penting<br><br>
-
-                                                                    <strong>🧠 Learning Process:</strong><br>
-                                                                    • Backtest ratio signals pada historical data<br>
-                                                                    • Catat hasil trading berdasarkan ratio<br>
-                                                                    • Adjust threshold berdasarkan pengalaman<br>
-                                                                    • Combine dengan indikator favorit Anda<br><br>
-
-                                                                    <strong>🚀 Advanced Usage:</strong><br>
-                                                                    • Create ratio-based trading bots<br>
-                                                                    • Develop ratio divergence strategies<br>
-                                                                    • Use ratio for risk management<br>
-                                                                    • Integrate dengan portfolio management
-                                                        </div>
-
-                                                        <div class="alert alert-success small mt-3">
-                                                            <strong>💡 Kesimpulan Volume Ratio %:</strong><br>
-                                                            Volume Ratio % adalah indikator fundamental yang menunjukkan
-                                                            arah aliran uang sesungguhnya di pasar crypto. Dengan bobot
-                                                            25% dalam algoritma rekomendasi, metric ini menjadi salah
-                                                            satu faktor terpenting untuk mengidentifikasi tren pasar
-                                                            yang sebenarnya. Gunakan dengan bijak, selalu konfirmasi
-                                                            dengan indikator lain, dan ingat bahwa tidak ada indikator
-                                                            yang 100% akurat - risk management tetap yang utama!
-                                                        </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <h4 class="text-info mb-3">🎨 <strong>Color Coding</strong></h4>
-                        <div class="card bg-dark text-light mb-3">
-                            <div class="card-body">
-                                <h6 class="card-title text-success">🟢 Green (Excellent)</h6>
-                                <p class="card-text small">67-100% - Kondisi sangat baik</p>
-
-                                <h6 class="card-title text-warning">🟡 Yellow (Good)</h6>
-                                <p class="card-text small">34-66% - Kondisi cukup baik</p>
-
-                                <h6 class="card-title text-danger">🔴 Red (Poor)</h6>
-                                <p class="card-text small">0-33% - Kondisi kurang baik</p>
-
-                                <h6 class="card-title text-success">🟢 BUY Recommendation</h6>
-                                <p class="card-text small">Sinyal beli dengan confidence ≥60%</p>
-
-                                <h6 class="card-title text-danger">🔴 SELL Recommendation</h6>
-                                <p class="card-text small">Sinyal jual dengan confidence ≥60%</p>
-
-                                <h6 class="card-title text-warning">🟡 HOLD Recommendation</h6>
-                                <p class="card-text small">Tunggu dengan confidence <60%< /p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <div class="alert alert-info bg-dark text-light border-info">
-                            <h5>💡 <strong>Tips Penggunaan:</strong></h5>
-                            <ul class="mb-0">
-                                <li><strong>Sorting:</strong> Klik header kolom untuk mengurutkan data</li>
-                                <li><strong>Filtering:</strong> Gunakan search box untuk mencari coin tertentu</li>
-                                <li><strong>Row Limit:</strong> Atur jumlah baris yang ditampilkan (default: 20)</li>
-                                <li><strong>Real-time:</strong> Data diperbarui secara otomatis via WebSocket</li>
-                                <li><strong>Recommendation:</strong> Gunakan sebagai panduan, bukan keputusan final</li>
-                                <li><strong>Risk Management:</strong> Selalu gunakan stop-loss dan position sizing</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <!-- Quick access: Open Recs tab directly under Tips Penggunaan -->
-                <div class="row mt-2">
-                    <div class="col-md-12 text-center">
-                        <button id="openRecsBtn" class="btn btn-sm btn-outline-primary">Open Recs
-                            (Recommendations)</button>
                     </div>
                 </div>
             </div>
-
             <div class="tab-pane fade" id="signalLab" role="tabpanel">
                 <div class="card bg-dark text-light mb-3">
                     <div class="card-body">
@@ -1205,10 +524,90 @@
                                 <th>📊 Vol</th>
                                 <th>➗ Avg</th>
                                 <th>⚡ Ratio</th>
+                                <th>📈 Price Δ</th>
+                                <th>💡 Recs</th>
                                 <th>⏰ Update</th>
                             </tr>
                         </thead>
                         <tbody id="spikeBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Frequency Tab -->
+            <div class="tab-pane fade" id="frequency" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="freqTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>📊 1m B</th>
+                                <th>📊 1m S</th>
+                                <th>📊 5m B</th>
+                                <th>📊 5m S</th>
+                                <th>📊 10m B</th>
+                                <th>📊 10m S</th>
+                                <th>📊 30m B</th>
+                                <th>📊 30m S</th>
+                                <th>📊 1h B</th>
+                                <th>📊 1h S</th>
+                                <th>📊 2h B</th>
+                                <th>📊 2h S</th>
+                                <th>📊 24h B</th>
+                                <th>📊 24h S</th>
+                            </tr>
+                        </thead>
+                        <tbody id="freqBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Freq Ratio Tab -->
+            <div class="tab-pane fade" id="freqRatio" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="freqRatioTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>⚖️ 1m</th>
+                                <th>⚖️ 5m</th>
+                                <th>⚖️ 10m</th>
+                                <th>⚖️ 30m</th>
+                                <th>⚖️ 1h</th>
+                                <th>⚖️ 2h</th>
+                                <th>⚖️ 24h</th>
+                                <th>📊 vs Avg 2h</th>
+                                <th>📈 Freq Spike</th>
+                            </tr>
+                        </thead>
+                        <tbody id="freqRatioBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Smart Analysis Tab -->
+            <div class="tab-pane fade" id="smartAnalysis" role="tabpanel">
+                <small class="text-muted d-block" style="margin-bottom: 4px;">Advanced formulas: Smart Money Index, Trade Intensity, Momentum Divergence, Accumulation Score, Breakout Prob, LSI, Market Mode</small>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="smartTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>💰 SMI</th>
+                                <th title="Trade Intensity - measures trading activity level">🔥 Intensity</th>
+                                <th title="Momentum Divergence - price vs volume mismatch">💥 Divergence</th>
+                                <th title="Accumulation/Distribution Score">🎯 Accum Score</th>
+                                <th title="Whale Activity Index">🐋 Whale</th>
+                                <th title="Retail vs Institution ratio">👥 R/I Ratio</th>
+                                <th title="Pressure Index - buy/sell pressure">💪 Pressure</th>
+                                <th title="Trend Strength 0-100">📈 Trend</th>
+                                <th title="Breakout Probability - likelihood of price breakout">🚀 Breakout%</th>
+                                <th title="Liquidity Stress Index - measures market stress">⚡ LSI</th>
+                                <th title="Market Mode Classification">🏷️ Mode</th>
+                                <th>💡 Signal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="smartBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -1407,16 +806,49 @@
             </div>
         </div>
     </div>
+    <script src="js/config/metrics-constants.js"></script>
+    <script src="js/config/info-docs.js"></script>
+    <script src="js/core/analytics-core.js"></script>
     <script src="js/formulas/math-formulas.js"></script>
     <script src="js/formulas/analytics-formulas.js"></script>
+    <script src="js/formulas/smart-formulas.js"></script>
+    <script src="js/modules/worker-pool.js"></script>
     <script src="js/modules/helpers.js"></script>
     <script src="js/modules/alerts.js"></script>
+    <script src="js/modules/sort-options-loader.js"></script>
     <script src="js/modules/advanced-sort.js"></script>
     <script src="js/modules/tab-renderers.js"></script>
     <script src="js/modules/info-tab.js"></script>
     <script src="js/modules/update-table.js"></script>
     <script src="websocket-example.js"></script>
     <script src="js/modules/ws-client.js"></script>
+    <script>
+    // Debug: ensure select is clickable
+    document.addEventListener('DOMContentLoaded', function() {
+        const sel = document.getElementById('sortBy');
+        if (sel) {
+            sel.disabled = false;
+            sel.style.pointerEvents = 'auto';
+            sel.style.position = 'relative';
+            sel.style.zIndex = '9999';
+            console.log('[DEBUG] sortBy select enabled:', !sel.disabled);
+        }
+        // Debug click on select
+        document.addEventListener('click', function(e) {
+            const sel = document.getElementById('sortBy');
+            if (!sel) return;
+            const rect = sel.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                const topEl = document.elementFromPoint(e.clientX, e.clientY);
+                console.log('[DEBUG CLICK] target:', e.target.tagName, e.target.id);
+                console.log('[DEBUG CLICK] elementFromPoint:', topEl ? topEl.tagName : null, topEl ? topEl.id : null, topEl ? topEl.className : null);
+                if (topEl !== sel && !sel.contains(topEl)) {
+                    console.warn('[DEBUG CLICK] Something is blocking the select!', topEl);
+                }
+            }
+        }, true);
+    });
+    </script>
 </body>
 
 </html>

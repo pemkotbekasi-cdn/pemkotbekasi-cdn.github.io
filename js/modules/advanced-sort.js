@@ -44,13 +44,16 @@
 
     function toggleBaseSortControls(disabled) {
         try {
+            // Don't actually disable controls - just add visual indicator
+            // This was causing issues where select became unclickable
             if (sortBySelect) {
-                sortBySelect.disabled = !!disabled;
+                // sortBySelect.disabled = !!disabled;  // DISABLED - was blocking clicks
                 sortBySelect.classList.toggle('opacity-50', !!disabled);
             }
             if (sortOrderRadios) {
                 for (const r of sortOrderRadios) {
-                    if (r) r.disabled = !!disabled;
+                    // if (r) r.disabled = !!disabled;  // DISABLED - was blocking clicks
+                    if (r) r.classList.toggle('opacity-50', !!disabled);
                 }
             }
         } catch (e) { }
@@ -134,19 +137,31 @@
         if (advFilterFlowToggle && advFilterFlowToggle.checked && advFilterFlowValue) {
             const flowValue = Number(advFilterFlowValue.value);
             if (Number.isFinite(flowValue)) {
+                // Normalize comparator to valid values only
+                let comparator = (advFilterFlowComparator && advFilterFlowComparator.value) || '>=';
+                if (!['>', '>=', '<', '<=', '=', '=='].includes(comparator)) {
+                    comparator = '>=';
+                }
                 filters.flow = {
                     metric: (advFilterFlowMetric && advFilterFlowMetric.value) || 'vol_ratio',
-                    comparator: (advFilterFlowComparator && advFilterFlowComparator.value) === '<=' ? '<=' : '>=',
+                    comparator: comparator,
                     value: flowValue
                 };
             }
         }
         if (advFilterDurToggle && advFilterDurToggle.checked && advFilterDurValue) {
-            const durValue = Number(advFilterDurValue.value);
+            let durValue = Number(advFilterDurValue.value);
             if (Number.isFinite(durValue)) {
+                // Clamp durability to valid range 0-100
+                durValue = Math.max(0, Math.min(100, durValue));
+                // Normalize comparator
+                let comparator = (advFilterDurComparator && advFilterDurComparator.value) || '>=';
+                if (!['>', '>=', '<', '<=', '=', '=='].includes(comparator)) {
+                    comparator = '>=';
+                }
                 filters.durability = {
                     metric: (advFilterDurMetric && advFilterDurMetric.value) || 'vol_durability',
-                    comparator: (advFilterDurComparator && advFilterDurComparator.value) === '<=' ? '<=' : '>=',
+                    comparator: comparator,
                     value: durValue
                 };
             }
@@ -154,8 +169,12 @@
         if (advFilterPriceToggle && advFilterPriceToggle.checked) {
             let minVal = advFilterPriceMin ? Number(advFilterPriceMin.value) : NaN;
             let maxVal = advFilterPriceMax ? Number(advFilterPriceMax.value) : NaN;
+            // Default and clamp to 0-100 range
             if (!Number.isFinite(minVal)) minVal = 0;
             if (!Number.isFinite(maxVal)) maxVal = 100;
+            minVal = Math.max(0, Math.min(100, minVal));
+            maxVal = Math.max(0, Math.min(100, maxVal));
+            // Swap if min > max
             if (minVal > maxVal) {
                 const temp = minVal;
                 minVal = maxVal;
