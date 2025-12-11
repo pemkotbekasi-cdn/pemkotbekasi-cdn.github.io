@@ -178,29 +178,494 @@
             </li>
         </ul>
 
-        <div class="tab-content mt-2" id="dataTabsContent" data-partials="summary,volume,volRatio,volDur,microstructure,insight,info,signalLab,backtest,risk,events,alerts,spikes,frequency,freqRatio,smartAnalysis,recommendations"></div>
+        <div class="tab-content mt-2" id="dataTabsContent">
+            <div class="tab-pane fade show active" id="summary" role="tabpanel">
+                <div class="d-flex justify-content-center" style="margin-bottom: 4px;">
+                    <button class="btn btn-outline-success btn-sm me-2" onclick="quickSort('vol_ratio')">
+                        🚀 Quick Sort: Vol Ratio %
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" onclick="showVolRatioInfo()">
+                        📚 Learn About Vol Ratio %
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="summaryTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>💰 Price</th>
+                                <th>📊 Change %</th>
+                                <th>📍 Price Pos</th>
+                                <th>🎯 Recommendation</th>
+                                <th>⚖️ Risk</th>
+                                <th>📊 Vol Ratio % (2h)</th>
+                                <th>📊 Vol Buy (2h)</th>
+                                <th>📊 Vol Sell (2h)</th>
+                                <th>⚖️ Vol Dur (2h)</th>
+                                <th>📊 Vol Buy (24h)</th>
+                                <th>📊 Vol Sell (24h)</th>
+                                <th>⏰ Update</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        <script>
-            (async function(){
-                const container = document.getElementById('dataTabsContent');
-                const list = container.getAttribute('data-partials') || '';
-                const parts = list.split(',').map(s=>s.trim()).filter(Boolean);
-                for(const name of parts){
-                    try{
-                        const res = await fetch('partials/' + name + '.html');
-                        if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
-                        const html = await res.text();
-                        container.insertAdjacentHTML('beforeend', html);
-                    }catch(err){
-                        console.error('Failed to load partial', name, err);
-                        container.insertAdjacentHTML('beforeend', '<div class="tab-pane fade" id="'+name+'">Error loading '+name+'</div>');
-                    }
-                }
-                    // mark loaded and broadcast so other scripts can initialize safely
-                    window.PARTIALS = parts;
-                    document.dispatchEvent(new CustomEvent('partialsLoaded', { detail: { parts } }));
-                })();
-        </script>
+            <!-- Activity tab removed: feed only provides volume-based metrics now -->
+
+            <div class="tab-pane fade" id="volume" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="volTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>📊 Buy 1m</th>
+                                <th>📊 Sell 1m</th>
+                                <th>📊 Buy 5m</th>
+                                <th>📊 Sell 5m</th>
+                                <th>📊 Buy 10m</th>
+                                <th>📊 Sell 10m</th>
+                                <th>📊 Buy 15m</th>
+                                <th>📊 Sell 15m</th>
+                                <th>📊 Buy 20m</th>
+                                <th>📊 Sell 20m</th>
+                                <th>📊 Buy 30m</th>
+                                <th>📊 Sell 30m</th>
+                                <th>📊 Buy 60m</th>
+                                <th>📊 Sell 60m</th>
+                                <th>📊 Buy 120m</th>
+                                <th>📊 Sell 120m</th>
+                                <th>📊 Ratio %</th>
+                                <th>📊 Buy (24h)</th>
+                                <th>📊 Sell (24h)</th>
+                                <th>📊 Total (24h)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="volRatio" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="volRatioTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>1m</th>
+                                <th>5m</th>
+                                <th>10m</th>
+                                <th>15m</th>
+                                <th>20m</th>
+                                <th>30m</th>
+                                <th>1h</th>
+                                <th>2h</th>
+                                <th>24h</th>
+                                <th>Last Change %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volRatioBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="volDur" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="volDurTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>📊 Change %</th>
+                                <th>1m</th>
+                                <th>5m</th>
+                                <th>10m</th>
+                                <th>15m</th>
+                                <th>20m</th>
+                                <th>30m</th>
+                                <th>1h</th>
+                                <th>24h</th>
+                            </tr>
+                        </thead>
+                        <tbody id="volDurBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="microstructure" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="microTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>Cohesion</th>
+                                <th>Acc Vol</th>
+                                <th>FBI</th>
+                                <th>OFSI</th>
+                                <th>FSI</th>
+                                <th>Z-Press</th>
+                                <th>TIM</th>
+                                <th>CIS</th>
+                                <th>LSI</th>
+                                <th>Range Comp</th>
+                                <th>PFCI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="microBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="insight" role="tabpanel">
+                <div class="row">
+                    <div class="col-12">
+                        <div id="insightPane">
+                            <h4 class="text-info">🔍 Insight</h4>
+                            <div id="insightPaneBody" class="card bg-dark text-light p-3">
+                                <p class="text-muted">Select a coin from the Summary tab to see detailed insights here.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="info" role="tabpanel">
+                <!-- Runtime status rendered by info-tab.js -->
+                <div id="infoRuntime" class="mb-3"></div>
+                
+                <!-- Documentation rendered from JSON by info-tab.js -->
+                <div id="infoDocsContainer" class="mb-3"></div>
+                
+                <!-- Alert Controls - keep these as they're interactive -->
+                <div class="card bg-dark text-light mb-3">
+                    <div class="card-body">
+                        <h5 class="text-info mb-3">🔔 Alert Controls</h5>
+                        <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="compactAlertsToggle">
+                                <label class="form-check-label small" for="compactAlertsToggle">Compact banners</label>
+                            </div>
+                            <div class="input-group input-group-sm" style="width:120px;">
+                                <span class="input-group-text">Max</span>
+                                <input type="number" id="maxAlertBanners" class="form-control" value="3" min="0">
+                            </div>
+                            <button id="showHiddenAlertsBtn" class="btn btn-sm btn-outline-secondary">Show hidden</button>
+                            <button id="openRecsBtn" class="btn btn-sm btn-outline-primary">Open Recs</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="signalLab" role="tabpanel">
+                <div class="card bg-dark text-light mb-3">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Coin</label>
+                                <select id="signalLabCoinSelect"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Timeframe</label>
+                                <select id="signalLabTfSelect"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary">
+                                    <option value="1m">1m</option>
+                                    <option value="5m">5m</option>
+                                    <option value="10m">10m</option>
+                                    <option value="30m">30m</option>
+                                    <option value="60m">60m</option>
+                                    <option value="120m" selected>120m</option>
+                                    <option value="24h">24h</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Status</label>
+                                <div id="signalLabStatus" class="fw-bold">-</div>
+                            </div>
+                        </div>
+                        <div id="signalLabPane" class="mt-3 small text-muted">
+                            <p class="mb-0">Select a coin to see the multi-factor recommendation breakdown.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="backtest" role="tabpanel">
+                <div class="card bg-dark text-light mb-3">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Coin</label>
+                                <select id="backtestCoinSelect"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Samples Used</label>
+                                <div id="backtestSampleCount" class="fw-bold">-</div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small class="text-muted">Based on recommendation log & local history</small>
+                            </div>
+                        </div>
+                        <div id="backtestPane" class="mt-3 small text-muted">
+                            <p class="mb-0">Waiting for recommendation history…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="risk" role="tabpanel">
+                <div class="card bg-dark text-light mb-3">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Coin</label>
+                                <select id="riskCoinSelect"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small text-muted">Lookback</label>
+                                <select id="riskLookbackSelect"
+                                    class="form-select form-select-sm bg-dark text-light border-secondary">
+                                    <option value="50">Last 50 pts</option>
+                                    <option value="100" selected>Last 100 pts</option>
+                                    <option value="200">Last 200 pts</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small class="text-muted">ATR, realized volatility, drawdowns</small>
+                            </div>
+                        </div>
+                        <div id="riskPane" class="mt-3 small text-muted">
+                            <p class="mb-0">Waiting for history…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="events" role="tabpanel">
+                <div class="card bg-dark text-light mb-3">
+                    <div class="card-body">
+                        <h5 class="text-info">📅 Event Watch</h5>
+                        <p class="small text-muted">Combines rule-based alerts, sharp insights, and spike detections
+                            logged locally.</p>
+                        <div id="eventPane" class="mt-3 small text-muted">
+                            <p class="mb-0">No events yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="alerts" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4 class="text-info">🔔 Alerts</h4>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableAlertsToggle">
+                                    <label class="form-check-label" for="enableAlertsToggle">🔔 Enable Alerts</label>
+                                </div>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableSoundToggle">
+                                    <label class="form-check-label" for="enableSoundToggle">🔊 Sound Alerts</label>
+                                </div>
+                                <div class="input-group input-group-sm mt-2">
+                                    <input type="text" id="alertWebhookUrl" class="form-control"
+                                        placeholder="Webhook URL (optional)">
+                                    <button class="btn btn-outline-secondary" id="alertWebhookTest">Test</button>
+                                </div>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="persistHistoryToggleAlt">
+                                    <label class="form-check-label" for="persistHistoryToggleAlt">💾 Persist History
+                                        (LocalStorage) — control</label>
+                                </div>
+                                <div class="form-text small text-muted mt-2">Alerts appear as a banner and can send
+                                    webhooks when configured.</div>
+                                <div id="alertsListContainer" class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 class="small text-muted mb-0">Recent Alerts</h6>
+                                        <div>
+                                            <button id="clearAlertsBtn"
+                                                class="btn btn-sm btn-outline-danger">Clear</button>
+                                        </div>
+                                    </div>
+                                    <div id="alertsList" class="list-group list-group-flush"
+                                        style="max-height:240px;overflow:auto;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="alertRulesNotesColumn">
+                        <h6 class="text-success">Alert Rules & Notes</h6>
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body small">
+                                <p>• Alert when Vol Ratio % (2h) &gt; 300% (strong buy)</p>
+                                <p>• Alert when Vol Ratio % (2h) &lt; 30% (strong sell)</p>
+                                <p>• Alert when Vol Ratio crosses 100%</p>
+                                <p class="mt-2 text-muted">Use webhook test to verify delivery. Enable sound for audible
+                                    alerts.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="tab-pane fade" id="spikes" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="spikeTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>⏱ Timeframe</th>
+                                <th>📊 Vol</th>
+                                <th>➗ Avg</th>
+                                <th>⚡ Ratio</th>
+                                <th>📈 Price Δ</th>
+                                <th>💡 Recs</th>
+                                <th>⏰ Update</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spikeBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Frequency Tab -->
+            <div class="tab-pane fade" id="frequency" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="freqTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>📊 1m B</th>
+                                <th>📊 1m S</th>
+                                <th>📊 5m B</th>
+                                <th>📊 5m S</th>
+                                <th>📊 10m B</th>
+                                <th>📊 10m S</th>
+                                <th>📊 30m B</th>
+                                <th>📊 30m S</th>
+                                <th>📊 1h B</th>
+                                <th>📊 1h S</th>
+                                <th>📊 2h B</th>
+                                <th>📊 2h S</th>
+                                <th>📊 24h B</th>
+                                <th>📊 24h S</th>
+                            </tr>
+                        </thead>
+                        <tbody id="freqBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Freq Ratio Tab -->
+            <div class="tab-pane fade" id="freqRatio" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="freqRatioTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>⚖️ 1m</th>
+                                <th>⚖️ 5m</th>
+                                <th>⚖️ 10m</th>
+                                <th>⚖️ 30m</th>
+                                <th>⚖️ 1h</th>
+                                <th>⚖️ 2h</th>
+                                <th>⚖️ 24h</th>
+                                <th>📊 vs Avg 2h</th>
+                                <th>📈 Freq Spike</th>
+                            </tr>
+                        </thead>
+                        <tbody id="freqRatioBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Smart Analysis Tab -->
+            <div class="tab-pane fade" id="smartAnalysis" role="tabpanel">
+                <small class="text-muted d-block" style="margin-bottom: 4px;">Advanced formulas: Smart Money Index, Trade Intensity, Momentum Divergence, Accumulation Score, Breakout Prob, LSI, Market Mode</small>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm" id="smartTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>💰 SMI</th>
+                                <th title="Trade Intensity - measures trading activity level">🔥 Intensity</th>
+                                <th title="Momentum Divergence - price vs volume mismatch">💥 Divergence</th>
+                                <th title="Accumulation/Distribution Score">🎯 Accum Score</th>
+                                <th title="Whale Activity Index">🐋 Whale</th>
+                                <th title="Retail vs Institution ratio">👥 R/I Ratio</th>
+                                <th title="Pressure Index - buy/sell pressure">💪 Pressure</th>
+                                <th title="Trend Strength 0-100">📈 Trend</th>
+                                <th title="Breakout Probability - likelihood of price breakout">🚀 Breakout%</th>
+                                <th title="Liquidity Stress Index - measures market stress">⚡ LSI</th>
+                                <th title="Market Mode Classification">🏷️ Mode</th>
+                                <th>💡 Signal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="smartBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="recommendations" role="tabpanel">
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="input-group input-group-sm" style="width:160px;">
+                            <span class="input-group-text">Timeframe</span>
+                            <select id="recTimeframe" class="form-select">
+                                <option value="All">All</option>
+                                <option value="1m">1m</option>
+                                <option value="5m">5m</option>
+                                <option value="10m">10m</option>
+                                <option value="30m">30m</option>
+                                <option value="60m">60m</option>
+                                <option value="120m">120m</option>
+                                <option value="24h">24h</option>
+                            </select>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="useAtrRecs">
+                            <label class="form-check-label small text-muted" for="useAtrRecs">Use ATR-based
+                                TP/SL</label>
+                        </div>
+                        <div class="input-group input-group-sm" style="width:260px;">
+                            <span class="input-group-text">TP% min / max</span>
+                            <input type="number" id="tpMin" class="form-control" placeholder="min" value="2" step="0.1">
+                            <input type="number" id="tpMax" class="form-control" placeholder="max" value="10"
+                                step="0.1">
+                        </div>
+                        <div class="input-group input-group-sm" style="width:160px;">
+                            <span class="input-group-text">SL% max</span>
+                            <input type="number" id="slMax" class="form-control" placeholder="max" value="5" step="0.1">
+                        </div>
+                        <div class="input-group input-group-sm" style="width:200px;">
+                            <span class="input-group-text">Sens</span>
+                            <input type="range" id="confSensitivity" min="0" max="2" step="0.05" value="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped" id="recsTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>⏱ Timeframe</th>
+                                <th>🎯 Recommendation</th>
+                                <th>🔎 Confidence</th>
+                                <th>💰 Price</th>
+                                <th>🎯 TP</th>
+                                <th>⛔ SL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="modal fade" id="advancedSortModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -355,7 +820,6 @@
     <script src="js/modules/tab-renderers.js"></script>
     <script src="js/modules/info-tab.js"></script>
     <script src="js/modules/update-table.js"></script>
-    <script src="js/init-partials.js"></script>
     <script src="websocket-example.js"></script>
     <script src="js/modules/ws-client.js"></script>
     <script>
