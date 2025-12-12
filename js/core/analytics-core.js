@@ -118,7 +118,7 @@
     // ===================== Smart Money Index =====================
 
     function calculateSmartMoneyIndex(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         const volBuy2h = toNum(a.volBuy2h);
         const volSell2h = toNum(a.volSell2h);
@@ -168,7 +168,7 @@
     // ===================== Trade Intensity =====================
 
     function calculateTradeIntensity(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         const volBuy2h = toNum(a.volBuy2h);
         const volSell2h = toNum(a.volSell2h);
@@ -204,7 +204,7 @@
     // ===================== Accumulation Score =====================
 
     function calculateAccumulationScore(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         const volDur2h = toNum(a.volDurability2h_percent) || 50;
         const volDur24h = toNum(a.volDurability24h_percent) || 50;
@@ -234,7 +234,7 @@
     // ===================== Momentum Divergence =====================
 
     function calculateMomentumDivergence(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         const priceChange = toNum(data.percent_change);
         
         const volDur = toNum(a.volDurability2h_percent) || 50;
@@ -273,7 +273,7 @@
     // ===================== Whale Activity =====================
 
     function calculateWhaleActivity(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         const smi = calculateSmartMoneyIndex(data);
         const volVsAvg = toNum(a.volBuy_vs_avg_percent) || 100;
@@ -339,7 +339,7 @@
     // ===================== Pressure Index =====================
 
     function calculatePressureIndex(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         const volDur2h = toNum(a.volDurability2h_percent) || 50;
         const freqDur = toNum(a.freqRatio2h_percent) || 50;
@@ -368,7 +368,7 @@
     // ===================== Trend Strength =====================
 
     function calculateTrendStrength(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         const volDur2h = toNum(a.volDurability2h_percent) || 50;
         const volDur24h = toNum(a.volDurability24h_percent) || 50;
@@ -394,7 +394,7 @@
     // ===================== NEW: Breakout Probability =====================
 
     function calculateBreakoutProbability(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         const history = data._history || [];
         
         // Factors for breakout:
@@ -445,7 +445,7 @@
     // ===================== NEW: Liquidity Stress Index =====================
 
     function calculateLiquidityStressIndex(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         
         // LSI = how thin is the liquidity
         // High LSI = illiquid, big trades move market
@@ -484,7 +484,7 @@
     // ===================== NEW: Market Mode Classifier =====================
 
     function classifyMarketMode(data) {
-        const a = data._analytics || data || {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         const history = data._history || [];
         
         const atr = computeATR(history, 14);
