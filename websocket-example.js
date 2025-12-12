@@ -318,8 +318,9 @@
         window.exportInsightCSV = function (coin, data) {
             // export history points and a few summary fields
             const rows = [];
+            const _metricsCSV = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
             rows.push(['coin', coin]);
-            rows.push(['risk_score', data.risk_score || (data._analytics && data._analytics.riskScore) || 0]);
+            rows.push(['risk_score', data.risk_score || _metricsCSV.riskScore || 0]);
             rows.push([]);
             rows.push(['ts', 'price', 'volBuy2h', 'volSell2h']);
             const hist = data._history || [];
@@ -343,16 +344,17 @@
             const title = document.getElementById('insightModalLabel');
             title.textContent = `Insights — ${coin}`;
 
-            const risk = data.risk_score || (data._analytics && data._analytics.riskScore) || 0;
-            const comp = (data._analytics && data._analytics.components) || {};
             const hist = data._history || [];
+            const _metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+            const risk = data.risk_score || _metrics.riskScore || 0;
+            const comp = _metrics.components || {};
             // prepare z-score / persistence diagnostics
             const buySeries = hist.map(h => Number(h.volBuy2h || 0));
             const sellSeries = hist.map(h => Number(h.volSell2h || 0));
             const buyStat = meanStd(buySeries);
             const sellStat = meanStd(sellSeries);
-            const currBuy = Number((data._analytics && data._analytics.volBuy2h) || getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM') || 0);
-            const currSell = Number((data._analytics && data._analytics.volSell2h) || getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM') || 0);
+            const currBuy = Number((_metrics && _metrics.volBuy2h) || getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM') || 0);
+            const currSell = Number((_metrics && _metrics.volSell2h) || getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM') || 0);
             const zBuy = (buySeries.length >= 6 && buyStat.std > 0) ? ((currBuy - buyStat.mean) / buyStat.std) : null;
             const zSell = (sellSeries.length >= 6 && sellStat.std > 0) ? ((currSell - sellStat.mean) / sellStat.std) : null;
             // persistence: last 3 buys > mean+std
@@ -418,9 +420,10 @@
             try {
                 const pane = document.getElementById('insightPaneBody');
                 if (!pane) return showInsightModal(coin, data);
-                const risk = data.risk_score || (data._analytics && data._analytics.riskScore) || 0;
-                const comp = (data._analytics && data._analytics.components) || {};
                 const hist = data._history || [];
+                const _metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+                const risk = data.risk_score || _metrics.riskScore || 0;
+                const comp = _metrics.components || {};
                 // compute price position
                 const currentPrice = parseFloat(data.last) || 0;
                 const highPrice = parseFloat(data.high) || currentPrice;
@@ -476,11 +479,11 @@
                                     <p><strong>Price Pos:</strong> ${pricePos}%</p>
                                     <p><strong>Vol Buy (2h):</strong> ${getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM') || 0}</p>
                                     <p><strong>Vol Sell (2h):</strong> ${getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM') || 0}</p>
-                                    <p><strong>Buy z-score (2h):</strong> ${data._analytics && data._analytics.zScoreBuy2h !== undefined ? data._analytics.zScoreBuy2h : 'N/A'}</p>
-                                    <p><strong>Sell z-score (2h):</strong> ${data._analytics && data._analytics.zScoreSell2h !== undefined ? data._analytics.zScoreSell2h : 'N/A'}</p>
-                                    <p><strong>Persistence (last3 buys > mean+std):</strong> ${data._analytics && data._analytics.persistenceBuy3 !== undefined ? data._analytics.persistenceBuy3 : '-'}</p>
-                                    ${data._analytics && data._analytics.divergence ? `<p class="text-warning"><strong>Divergence:</strong> ${data._analytics.divergence}</p>` : ''}
-                                    ${data._analytics && data._analytics.sharpInsights ? `<p><strong>Insight:</strong><br/>${data._analytics.sharpInsights.map(s => `- ${s}`).join('<br/>')}</p>` : ''}
+                                    <p><strong>Buy z-score (2h):</strong> ${_metrics && _metrics.zScoreBuy2h !== undefined ? _metrics.zScoreBuy2h : 'N/A'}</p>
+                                    <p><strong>Sell z-score (2h):</strong> ${_metrics && _metrics.zScoreSell2h !== undefined ? _metrics.zScoreSell2h : 'N/A'}</p>
+                                    <p><strong>Persistence (last3 buys > mean+std):</strong> ${_metrics && _metrics.persistenceBuy3 !== undefined ? _metrics.persistenceBuy3 : '-'}</p>
+                                    ${_metrics && _metrics.divergence ? `<p class="text-warning"><strong>Divergence:</strong> ${_metrics.divergence}</p>` : ''}
+                                    ${_metrics && _metrics.sharpInsights ? `<p><strong>Insight:</strong><br/>${_metrics.sharpInsights.map(s => `- ${s}`).join('<br/>')}</p>` : ''}
                                 </div>
                                 <div class="col-md-4">
                                     <h6>Recommendation Breakdown</h6>
@@ -634,7 +637,7 @@
             lastCoinUpdate[coin] = now;
             
             const prevCoinData = coinDataMap[coin] || null;
-            const prevAnalytics = prevCoinData && prevCoinData._analytics ? prevCoinData._analytics : null;
+            const prevAnalytics = prevCoinData && (prevCoinData.analytics || prevCoinData._analytics) ? (prevCoinData.analytics || prevCoinData._analytics) : null;
 
             // Debug: log keys and 24h-related fields once per coin (helps find naming mismatches)
             if (!loggedCoins.has(coin)) {
@@ -689,7 +692,9 @@
             // attach analytics and maintain short history for sparkline and z-scores
             try {
                 data._analytics = computeAnalytics(data);
-                data.risk_score = data._analytics.riskScore;
+                // mirror into new `analytics` property to support unified accessors
+                try { data.analytics = data._analytics; } catch (e) { /* ignore */ }
+                data.risk_score = ((data.analytics || data._analytics) && (data.analytics || data._analytics).riskScore) || data.risk_score || 0;
                 // keep history; prefer persisted history when available
                 if (!data._history || !Array.isArray(data._history) || data._history.length === 0) {
                     // try load from preloaded first (faster), then from localStorage
@@ -702,19 +707,20 @@
                     data._history = (persisted && persisted.length > 0) ? persisted.slice(-MAX_HISTORY) : [];
                 }
                 // include frequency fields in persisted history so z-scores can be computed later
+                const _histMetrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
                 data._history.push({
                     ts: Date.now(),
-                    volBuy2h: data._analytics.volBuy2h || 0,
-                    volSell2h: data._analytics.volSell2h || 0,
-                    volBuy24h: data._analytics.volBuy24h || 0,
-                    volSell24h: data._analytics.volSell24h || 0,
-                    freqBuy2h: data._analytics.freqBuy2h || 0,
-                    freqSell2h: data._analytics.freqSell2h || 0,
+                    volBuy2h: Number((_histMetrics && typeof _histMetrics.volBuy2h !== 'undefined') ? _histMetrics.volBuy2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volBuy2h) || 0),
+                    volSell2h: Number((_histMetrics && typeof _histMetrics.volSell2h !== 'undefined') ? _histMetrics.volSell2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volSell2h) || 0),
+                    volBuy24h: Number((_histMetrics && typeof _histMetrics.volBuy24h !== 'undefined') ? _histMetrics.volBuy24h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volBuy24h) || 0),
+                    volSell24h: Number((_histMetrics && typeof _histMetrics.volSell24h !== 'undefined') ? _histMetrics.volSell24h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volSell24h) || 0),
+                    freqBuy2h: Number((_histMetrics && typeof _histMetrics.freqBuy2h !== 'undefined') ? _histMetrics.freqBuy2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).freqBuy2h) || 0),
+                    freqSell2h: Number((_histMetrics && typeof _histMetrics.freqSell2h !== 'undefined') ? _histMetrics.freqSell2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).freqSell2h) || 0),
                     price: Number(data.last) || 0,
                     change: Number(data.percent_change) || 0,
                     high: Number(data.high || data.last || 0),
                     low: Number(data.low || data.last || 0),
-                    liquidity: Number(data._analytics.liquidity_avg_trade_value || 0)
+                    liquidity: Number(((_histMetrics && typeof _histMetrics.liquidity !== 'undefined') ? _histMetrics.liquidity : ((data.analytics || data._analytics) && (data.analytics || data._analytics).liquidity_avg_trade_value)) || 0)
                 });
                 if (data._history.length > MAX_HISTORY) data._history = data._history.slice(-MAX_HISTORY);
                 // save (throttled)
@@ -740,10 +746,11 @@
                     const sellStat = meanStd(sellSeries);
                     const freqBuyStat = meanStd(freqBuySeries);
                     const freqSellStat = meanStd(freqSellSeries);
-                    const currBuy = data._analytics.volBuy2h || 0;
-                    const currSell = data._analytics.volSell2h || 0;
-                    const currFreqBuy = data._analytics.freqBuy2h || 0;
-                    const currFreqSell = data._analytics.freqSell2h || 0;
+                    const _metricsWs = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+                    const currBuy = Number((_metricsWs && typeof _metricsWs.volBuy2h !== 'undefined') ? _metricsWs.volBuy2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volBuy2h) || getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM')) || 0;
+                    const currSell = Number((_metricsWs && typeof _metricsWs.volSell2h !== 'undefined') ? _metricsWs.volSell2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volSell2h) || getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM')) || 0;
+                    const currFreqBuy = Number((_metricsWs && typeof _metricsWs.freqBuy2h !== 'undefined') ? _metricsWs.freqBuy2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).freqBuy2h) || getNumeric(data, 'count_FREQ_minute_120_buy', 'freq_buy_2JAM')) || 0;
+                    const currFreqSell = Number((_metricsWs && typeof _metricsWs.freqSell2h !== 'undefined') ? _metricsWs.freqSell2h : ((data.analytics || data._analytics) && (data.analytics || data._analytics).freqSell2h) || getNumeric(data, 'count_FREQ_minute_120_sell', 'freq_sell_2JAM')) || 0;
 
                     // require a minimum number of samples and non-zero std to compute z-scores
                     const MIN_SAMPLES_FOR_Z = 6;
@@ -775,7 +782,8 @@
 
                     // divergence: price down but buy durability high
                     const pctChange = Number(data.percent_change) || (data.last && data.previous ? ((Number(data.last) - Number(data.previous)) / Number(data.previous)) * 100 : 0);
-                    const volDur2h = data._analytics.volDurability2h_percent || 0;
+                    const _metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+                    const volDur2h = (_metrics && _metrics.volDurability2h_percent !== undefined && _metrics.volDurability2h_percent !== null) ? Number(_metrics.volDurability2h_percent) : ((data.analytics || data._analytics) && (data.analytics || data._analytics).volDurability2h_percent ? Number((data.analytics || data._analytics).volDurability2h_percent) : 0);
                     let divergence = null;
                     if (pctChange < -0.5 && volDur2h >= 60 && zBuy > 1) divergence = 'Bullish divergence: price down while buy durability & volume surge';
                     else if (pctChange > 0.5 && volDur2h <= 40 && zSell > 1) divergence = 'Bearish divergence: price up but sell pressure increasing';
@@ -786,6 +794,7 @@
                     data._analytics.zScoreFreqSell2h = (zFreqSell === null || zFreqSell === undefined) ? undefined : Number(zFreqSell.toFixed(2));
                     data._analytics.persistenceBuy3 = (persistBuy === null || persistBuy === undefined) ? undefined : persistBuy; // 0..3 or undefined
                     data._analytics.persistenceFreqBuy3 = (persistFreqBuy === null || persistFreqBuy === undefined) ? undefined : persistFreqBuy;
+                    try { data.analytics = data._analytics; } catch (e) { /* ignore */ }
                     data._analytics.divergence = divergence;
 
                     // sharp insight summary
@@ -820,7 +829,7 @@
                         }
                     } catch (e) { console.warn('alert trigger error', e); }
 
-                    const a = data._analytics || {};
+                    const a = data.analytics || data._analytics || {};
                     const priceNow = Number(data.last) || 0;
                     const pricePrev = Number(data.previous) || priceNow;
                     const priceChangePct = Number.isFinite(pctChange) ? pctChange : (pricePrev ? ((priceNow - pricePrev) / pricePrev) * 100 : 0);
@@ -898,7 +907,7 @@
                     a.flowToVolatilityRatio = a.flowVolatilityRatio;
                 } catch (e) { console.error('analytics extras error', e); }
 
-            } catch (e) { data._analytics = {}; data.risk_score = 0; }
+                } catch (e) { data._analytics = {}; try { data.analytics = data._analytics; } catch(_){} data.risk_score = 0; }
 
             // Derive percent_sum_VOL_* fields from volume / avg if backend didn't provide them (localGetNumeric lives in analytics-formulas.js).
 
