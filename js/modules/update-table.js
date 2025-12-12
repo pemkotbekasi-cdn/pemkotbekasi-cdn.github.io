@@ -51,15 +51,28 @@
 
     // ===================== Durability Helpers =====================
     function getVolDurabilityMetric(data, timeframeKey, fallbackKeys = []) {
-        const analytics = (data && data._analytics) || {};
-        if (analytics.volDurabilityByTf && analytics.volDurabilityByTf[timeframeKey] !== undefined && analytics.volDurabilityByTf[timeframeKey] !== null) {
-            return Number(analytics.volDurabilityByTf[timeframeKey]) || 0;
+        const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        try {
+            if (metrics && metrics.volDurabilityByTf && metrics.volDurabilityByTf[timeframeKey] !== undefined && metrics.volDurabilityByTf[timeframeKey] !== null) {
+                return Number(metrics.volDurabilityByTf[timeframeKey]) || 0;
+            }
+            if (timeframeKey === '120m' && metrics && metrics.volDurability2h_percent !== undefined && metrics.volDurability2h_percent !== null) {
+                return Number(metrics.volDurability2h_percent) || 0;
+            }
+            if (timeframeKey === '24h' && metrics && metrics.volDurability24h_percent !== undefined && metrics.volDurability24h_percent !== null) {
+                return Number(metrics.volDurability24h_percent) || 0;
+            }
+        } catch (e) { /* fallback to analytics */ }
+
+        // fallback to raw data aliases
+        if (metrics && metrics.volDurabilityByTf && metrics.volDurabilityByTf[timeframeKey] !== undefined && metrics.volDurabilityByTf[timeframeKey] !== null) {
+            return Number(metrics.volDurabilityByTf[timeframeKey]) || 0;
         }
-        if (timeframeKey === '120m' && analytics.volDurability2h_percent !== undefined && analytics.volDurability2h_percent !== null) {
-            return Number(analytics.volDurability2h_percent) || 0;
+        if (timeframeKey === '120m' && metrics.volDurability2h_percent !== undefined && metrics.volDurability2h_percent !== null) {
+            return Number(metrics.volDurability2h_percent) || 0;
         }
-        if (timeframeKey === '24h' && analytics.volDurability24h_percent !== undefined && analytics.volDurability24h_percent !== null) {
-            return Number(analytics.volDurability24h_percent) || 0;
+        if (timeframeKey === '24h' && metrics.volDurability24h_percent !== undefined && metrics.volDurability24h_percent !== null) {
+            return Number(metrics.volDurability24h_percent) || 0;
         }
         return (fallbackKeys && fallbackKeys.length) ? (getNumeric(data, ...fallbackKeys) || 0) : 0;
     }
@@ -120,7 +133,7 @@
     }
 
     function computeVolRatioFor(data, buyAliases = [], sellAliases = [], analyticsBuyKey, analyticsSellKey) {
-        const analytics = (data && data._analytics) || {};
+        const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
         const normalize = (val) => {
             const n = Number(val);
             return Number.isFinite(n) ? n : 0;
@@ -726,7 +739,8 @@
 
         // Risk
         cell = row.insertCell(5);
-        const riskScore = data.risk_score || (data._analytics && data._analytics.riskScore) || 0;
+        const _metricsSummary = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        const riskScore = Number(data.risk_score || (_metricsSummary && _metricsSummary.riskScore) || 0);
         cell.textContent = riskScore + '%';
         cell.className = riskScore >= 67 ? 'text-danger fw-bold' : riskScore >= 40 ? 'text-warning fw-bold' : 'text-success fw-bold';
 
@@ -740,7 +754,9 @@
         row.insertCell(8).textContent = volSell2h;
 
         // Vol Durability 2h
-        let volDur2h = getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
+        let volDur2h = (typeof getUnifiedSmartMetrics === 'function' && getUnifiedSmartMetrics(data) && getUnifiedSmartMetrics(data).volDurability2h_percent !== null)
+            ? Number(getUnifiedSmartMetrics(data).volDurability2h_percent)
+            : getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
         if ((!volDur2h || volDur2h === 0) && (volBuy2h || volSell2h)) {
             const total2h = (volBuy2h || 0) + (volSell2h || 0);
             volDur2h = total2h > 0 ? Math.round(((volBuy2h || 0) / total2h) * 100) : 0;
@@ -871,7 +887,8 @@
 
     function renderMicroRow(body, coin, data) {
         // Use pre-computed analytics if available, fallback to raw data
-        const a = data._analytics || {};
+        const a = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : a;
         const tf = a.timeframes || {};
         
         // Get values from analytics first, then raw data as fallback (correct field names from WebSocket)
@@ -1043,30 +1060,34 @@
         const row = body.insertRow();
         row.dataset.coin = coin;
 
-        const getFreq = (...keys) => {
-            for (const k of keys) {
-                if (data[k] !== undefined && data[k] !== null) {
-                    const n = Number(data[k]);
-                    if (!isNaN(n)) return n;
-                }
+        // Prefer unified metrics (timeframes.freqBuy/freqSell) when available — fall back to raw fields
+        const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        const tf = (metrics && metrics.timeframes) ? metrics.timeframes : {};
+
+        const safeNum = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+
+        const tfValue = (key, propNames = ['freqBuy', 'freqSell']) => {
+            const t = tf[key] || {};
+            for (const prop of propNames) {
+                if (typeof t[prop] !== 'undefined' && t[prop] !== null) return t[prop];
             }
-            return 0;
+            return undefined;
         };
 
-        const freqBuy1m = getFreq('freq_buy_1MENIT', 'count_FREQ_minute1_buy');
-        const freqSell1m = getFreq('freq_sell_1MENIT', 'count_FREQ_minute1_sell');
-        const freqBuy5m = getFreq('freq_buy_5MENIT', 'count_FREQ_minute_5_buy');
-        const freqSell5m = getFreq('freq_sell_5MENIT', 'count_FREQ_minute_5_sell');
-        const freqBuy10m = getFreq('freq_buy_10MENIT', 'count_FREQ_minute_10_buy');
-        const freqSell10m = getFreq('freq_sell_10MENIT', 'count_FREQ_minute_10_sell');
-        const freqBuy30m = getFreq('freq_buy_30MENIT', 'count_FREQ_minute_30_buy');
-        const freqSell30m = getFreq('freq_sell_30MENIT', 'count_FREQ_minute_30_sell');
-        const freqBuy1h = getFreq('freq_buy_1JAM', 'count_FREQ_minute_60_buy');
-        const freqSell1h = getFreq('freq_sell_1JAM', 'count_FREQ_minute_60_sell');
-        const freqBuy2h = getFreq('freq_buy_2JAM', 'count_FREQ_minute_120_buy');
-        const freqSell2h = getFreq('freq_sell_2JAM', 'count_FREQ_minute_120_sell');
-        const freqBuy24h = getFreq('freq_buy_24JAM', 'count_FREQ_minute_1440_buy');
-        const freqSell24h = getFreq('freq_sell_24JAM', 'count_FREQ_minute_1440_sell');
+        const freqBuy1m = safeNum(tfValue('1m', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_1MENIT', 'count_FREQ_minute1_buy', 'count_FREQ_minute_1_buy'));
+        const freqSell1m = safeNum(tfValue('1m', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_1MENIT', 'count_FREQ_minute1_sell', 'count_FREQ_minute_1_sell'));
+        const freqBuy5m = safeNum(tfValue('5m', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_5MENIT', 'count_FREQ_minute_5_buy'));
+        const freqSell5m = safeNum(tfValue('5m', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_5MENIT', 'count_FREQ_minute_5_sell'));
+        const freqBuy10m = safeNum(tfValue('10m', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_10MENIT', 'count_FREQ_minute_10_buy'));
+        const freqSell10m = safeNum(tfValue('10m', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_10MENIT', 'count_FREQ_minute_10_sell'));
+        const freqBuy30m = safeNum(tfValue('30m', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_30MENIT', 'count_FREQ_minute_30_buy'));
+        const freqSell30m = safeNum(tfValue('30m', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_30MENIT', 'count_FREQ_minute_30_sell'));
+        const freqBuy1h = safeNum(tfValue('60m', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_1JAM', 'count_FREQ_minute_60_buy'));
+        const freqSell1h = safeNum(tfValue('60m', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_1JAM', 'count_FREQ_minute_60_sell'));
+        const freqBuy2h = safeNum(tfValue('120m', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_2JAM', 'count_FREQ_minute_120_buy', 'count_FREQ_minute_120_buy'));
+        const freqSell2h = safeNum(tfValue('120m', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_2JAM', 'count_FREQ_minute_120_sell'));
+        const freqBuy24h = safeNum(tfValue('24h', ['freqBuy', 'freq_buy']) ?? getNumeric(data, 'freq_buy_24JAM', 'count_FREQ_minute_1440_buy'));
+        const freqSell24h = safeNum(tfValue('24h', ['freqSell', 'freq_sell']) ?? getNumeric(data, 'freq_sell_24JAM', 'count_FREQ_minute_1440_sell'));
 
         row.insertCell(0).textContent = coin;
         
@@ -1094,8 +1115,9 @@
         const row = body.insertRow();
         row.dataset.coin = coin;
 
-        const analytics = data._analytics || {};
-        const tf = analytics.timeframes || {};
+        const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        const analytics = metrics;
+        const tf = (analytics && analytics.timeframes) ? analytics.timeframes : {};
 
         const getFreqRatio = (tfKey) => {
             const tfData = tf[tfKey] || {};
@@ -1291,55 +1313,57 @@
         // SMI (Smart Money Index)
         const smiCell = row.insertCell(1);
         smiCell.textContent = Math.round(metrics.smi.value);
-        smiCell.className = metrics.smi.className;
+        smiCell.className = metrics.smi.className || '';
         smiCell.title = metrics.smi.interpretation;
 
         // Trade Intensity
         const intCell = row.insertCell(2);
         intCell.textContent = Math.round(metrics.intensity.value) + '%';
-        intCell.className = metrics.intensity.className;
+        intCell.className = metrics.intensity.className || '';
         intCell.title = metrics.intensity.level;
 
         // Momentum Divergence
         const divCell = row.insertCell(3);
         divCell.textContent = metrics.divergence.interpretation;
-        divCell.className = metrics.divergence.className;
+        divCell.className = metrics.divergence.className || '';
 
         // Accumulation Score
         const accumCell = row.insertCell(4);
         accumCell.textContent = metrics.accumScore.value;
-        accumCell.className = metrics.accumScore.className;
+        accumCell.className = metrics.accumScore.className || '';
         accumCell.title = metrics.accumScore.interpretation;
 
         // Whale Activity
         const whaleCell = row.insertCell(5);
         whaleCell.textContent = Math.round(metrics.whale.value);
-        whaleCell.className = metrics.whale.className;
+        whaleCell.className = metrics.whale.className || '';
         whaleCell.title = metrics.whale.level;
 
         // R/I Ratio
         const riCell = row.insertCell(6);
-        riCell.textContent = metrics.riRatio.type;
-        riCell.className = metrics.riRatio.className;
+        // R/I ratio may be provided as a number or an object { value: .. }
+        const riVal = (metrics.riRatio && typeof metrics.riRatio === 'object') ? (Number(metrics.riRatio.value) || 0) : (Number(metrics.riRatio) || 0);
+        riCell.textContent = Math.round(riVal);
+        riCell.className = (metrics.riRatio && metrics.riRatio.className) ? metrics.riRatio.className : '';
 
         // Pressure Index
         const pressCell = row.insertCell(7);
         const pressVal = metrics.pressure.value;
         pressCell.textContent = (pressVal > 0 ? '+' : '') + Math.round(pressVal);
-        pressCell.className = metrics.pressure.className;
+        pressCell.className = metrics.pressure.className || '';
         pressCell.title = metrics.pressure.direction;
 
         // Trend Strength
         const trendCell = row.insertCell(8);
         trendCell.textContent = metrics.trendStrength.value + '%';
-        trendCell.className = metrics.trendStrength.className;
+        trendCell.className = metrics.trendStrength.className || '';
         trendCell.title = metrics.trendStrength.level + ' ' + metrics.trendStrength.direction;
 
         // Breakout Probability (NEW)
         const breakoutCell = row.insertCell(9);
         if (metrics.breakout) {
             breakoutCell.textContent = metrics.breakout.value + '%';
-            breakoutCell.className = metrics.breakout.className;
+            breakoutCell.className = metrics.breakout.className || '';
             breakoutCell.title = 'Direction: ' + metrics.breakout.direction + ' | Confidence: ' + metrics.breakout.confidence;
         } else {
             breakoutCell.textContent = '-';
@@ -1349,7 +1373,7 @@
         const lsiCell = row.insertCell(10);
         if (metrics.lsi) {
             lsiCell.textContent = metrics.lsi.value.toFixed(1);
-            lsiCell.className = metrics.lsi.className;
+            lsiCell.className = metrics.lsi.className || '';
             lsiCell.title = metrics.lsi.level;
         } else {
             lsiCell.textContent = '-';
@@ -1359,16 +1383,32 @@
         const modeCell = row.insertCell(11);
         if (metrics.marketMode) {
             modeCell.textContent = metrics.marketMode.mode;
-            modeCell.className = metrics.marketMode.className;
+            modeCell.className = metrics.marketMode.className || '';
             modeCell.title = 'Confidence: ' + metrics.marketMode.confidence + '%';
         } else {
             modeCell.textContent = '-';
         }
 
-        // Smart Signal
+        // Smart Signal + unified recommendation (show calculateRecommendation if available)
         const sigCell = row.insertCell(12);
-        sigCell.textContent = metrics.smartSignal.signal + ' (' + metrics.smartSignal.confidence + '%)';
-        sigCell.className = metrics.smartSignal.className;
+        try {
+            const smartText = (metrics && metrics.smartSignal && metrics.smartSignal.signal ? metrics.smartSignal.signal : 'HOLD') + ' (' + ((metrics && metrics.smartSignal && metrics.smartSignal.confidence) || 0) + '%)';
+            const pricePos = (metrics && metrics.pricePosition !== undefined && Number.isFinite(Number(metrics.pricePosition))) ? Math.round(Number(metrics.pricePosition)) : (data && Number.isFinite(Number(data.pricePosition)) ? Math.round(Number(data.pricePosition)) : 50);
+            const rec = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePos, null, false) : null;
+            if (rec && rec.recommendation) {
+                sigCell.textContent = smartText + ' · Rec: ' + rec.recommendation + ' (' + (rec.confidence || 0) + '%)';
+                const cls = [];
+                if (metrics.smartSignal && metrics.smartSignal.className) cls.push(metrics.smartSignal.className);
+                if (rec.className) cls.push(rec.className);
+                sigCell.className = cls.join(' ') || '';
+            } else {
+                sigCell.textContent = smartText;
+                sigCell.className = (metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '';
+            }
+        } catch (e) {
+            sigCell.textContent = (metrics.smartSignal && metrics.smartSignal.signal ? metrics.smartSignal.signal : 'HOLD') + ' (' + ((metrics.smartSignal && metrics.smartSignal.confidence) || 0) + '%)';
+            sigCell.className = (metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '';
+        }
     }
 
     // ===================== Exports =====================

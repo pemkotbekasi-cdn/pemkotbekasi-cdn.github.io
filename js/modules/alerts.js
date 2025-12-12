@@ -282,7 +282,8 @@ function evaluateAlertRulesForData(data) {
         if (!data || !data.coin) return;
         const rules = loadAlertRules();
         if (!rules || rules.length === 0) return;
-        const a = data._analytics || {};
+        const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        const a = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : metrics;
         for (const r of rules) {
             try {
                 if (!r.enabled) continue;
@@ -290,17 +291,24 @@ function evaluateAlertRulesForData(data) {
                 let val = null;
                 switch (r.metric) {
                     case 'vol_ratio_2h':
-                        val = (a.volRatioBuySell_percent !== undefined) ? a.volRatioBuySell_percent : ((getNumeric(data, 'count_VOL_minute_120_buy') || 0) / Math.max((getNumeric(data, 'count_VOL_minute_120_sell') || 0), 1) * 100);
+                        val = (metrics && typeof metrics.volRatioBuySell_percent !== 'undefined' && metrics.volRatioBuySell_percent !== null)
+                            ? metrics.volRatioBuySell_percent
+                            : (a.volRatioBuySell_percent !== undefined ? a.volRatioBuySell_percent : ((getNumeric(data, 'count_VOL_minute_120_buy') || 0) / Math.max((getNumeric(data, 'count_VOL_minute_120_sell') || 0), 1) * 100));
                         break;
                     case 'freq_vs_avg_buy_percent':
-                        val = a.freqBuy_vs_avg_percent !== undefined ? a.freqBuy_vs_avg_percent : ((getNumeric(data, 'count_FREQ_minute_120_buy') || a.freqBuy2h || 0) / Math.max((getNumeric(data, 'avg_FREQCOIN_buy_2JAM') || a.avgFreqBuy2h || 1), 1) * 100);
+                        val = (metrics && typeof metrics.freqBuy_vs_avg_percent !== 'undefined' && metrics.freqBuy_vs_avg_percent !== null)
+                            ? metrics.freqBuy_vs_avg_percent
+                            : (a.freqBuy_vs_avg_percent !== undefined ? a.freqBuy_vs_avg_percent : ((getNumeric(data, 'count_FREQ_minute_120_buy') || a.freqBuy2h || 0) / Math.max((getNumeric(data, 'avg_FREQCOIN_buy_2JAM') || a.avgFreqBuy2h || 1), 1) * 100));
                         break;
                     case 'freq_ratio_2h':
-                        val = (a.freqBuy2h !== undefined && a.freqSell2h !== undefined) ? ((Number(a.freqBuy2h) / Math.max(Number(a.freqSell2h), 1)) * 100) : null;
+                        const fbuy = (metrics && typeof metrics.freqBuy2h !== 'undefined') ? Number(metrics.freqBuy2h) : (a.freqBuy2h !== undefined ? Number(a.freqBuy2h) : null);
+                        const fsell = (metrics && typeof metrics.freqSell2h !== 'undefined') ? Number(metrics.freqSell2h) : (a.freqSell2h !== undefined ? Number(a.freqSell2h) : null);
+                        val = (fbuy !== null && fsell !== null) ? ((fbuy / Math.max(fsell, 1)) * 100) : null;
                         break;
                     default:
-                        // try direct analytics field
-                        val = a[r.metric] !== undefined ? a[r.metric] : null;
+                        // try direct analytics field or unified metrics
+                        if (metrics && typeof metrics[r.metric] !== 'undefined') val = metrics[r.metric];
+                        else val = a[r.metric] !== undefined ? a[r.metric] : null;
                 }
                 if (val === null || val === undefined) continue;
                 let triggered = false;

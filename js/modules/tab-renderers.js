@@ -105,7 +105,8 @@
                 return;
             }
             const timeframe = tfSelect.value || '120m';
-            const analytics = data._analytics || {};
+            const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+            const analytics = metrics;
             const price = Number(data.last) || 0;
             const high = Number(data.high) || price;
             const low = Number(data.low) || price;
@@ -113,8 +114,8 @@
             const pricePos = range > 0 ? Math.round(((price - low) / range) * 100) : 50;
             const rec = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePos, timeframe, false) : null;
             const factors = (rec && rec.factors) ? rec.factors : {};
-            const volRatio = analytics.volRatioBuySell_percent !== undefined ? fmtPct(analytics.volRatioBuySell_percent, 1) : '-';
-            const durability = analytics.volDurability2h_percent !== undefined ? fmtPct(analytics.volDurability2h_percent, 1) : '-';
+            const volRatio = (metrics && metrics.volRatioBuySell_percent !== undefined && metrics.volRatioBuySell_percent !== null) ? fmtPct(metrics.volRatioBuySell_percent, 1) : (analytics.volRatioBuySell_percent !== undefined ? fmtPct(analytics.volRatioBuySell_percent, 1) : '-');
+            const durability = (metrics && metrics.volDurability2h_percent !== undefined && metrics.volDurability2h_percent !== null) ? fmtPct(metrics.volDurability2h_percent, 1) : (analytics.volDurability2h_percent !== undefined ? fmtPct(analytics.volDurability2h_percent, 1) : '-');
             const freqRatio = (() => {
                 const b = Number(analytics.freqBuy2h) || 0;
                 const s = Number(analytics.freqSell2h) || 0;
@@ -215,7 +216,8 @@
             window._backtestCoin = currentCoin;
             const data = coinDataMap[currentCoin];
             const history = (data && Array.isArray(data._history)) ? data._history.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0)) : [];
-            const log = (data && data._analytics && Array.isArray(data._analytics.recommendationLog)) ? data._analytics.recommendationLog.slice(-200) : [];
+            const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+            const log = (metrics && Array.isArray(metrics.recommendationLog)) ? metrics.recommendationLog.slice(-200) : [];
             if (sampleEl) sampleEl.textContent = String(log.length || 0);
             if (!log.length || history.length < 2) {
                 pane.innerHTML = '<p class="mb-0 text-muted">Need more recommendations and history to run backtests.</p>';
@@ -332,7 +334,8 @@
             window._riskCoin = currentCoin;
             const lookback = Number(lookbackSelect.value) || 100;
             const data = coinDataMap[currentCoin];
-            const analytics = data && data._analytics ? data._analytics : {};
+            const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+            const analytics = metrics;
             const history = (data && Array.isArray(data._history)) ? data._history.slice(-Math.max(20, lookback)) : [];
             if (history.length < 2) {
                 pane.innerHTML = '<p class="mb-0 text-muted">Not enough history to compute risk metrics.</p>';

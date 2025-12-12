@@ -41,9 +41,9 @@
             return clamp(normalized, 0, 100);
         }
 
-        // Helper to get analytics data
+        // Helper to get analytics data (support both nested 'analytics' and legacy '_analytics')
         function getA(data) {
-            return data._analytics || data || {};
+            return (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : (data || {});
         }
 
         // ============ Smart Formulas (SYNCHRONIZED with analytics-core.js) ============
@@ -303,27 +303,49 @@
             // Calculate R/I ratio
             const riRatio = intensity.value > 0 ? safeDiv(whale.value, intensity.value, 1) * 100 : 100;
             
-            return {
-                smartMoneyIndex: smi.value,
-                smiNormalized: smi.normalized,
-                smiInterpretation: smi.interpretation,
-                tradeIntensity: intensity.value,
-                intensityNormalized: intensity.normalized,
-                intensityLevel: intensity.level,
-                momentumDivergence: divergence.value,
-                divergenceInterpretation: divergence.interpretation,
-                accumulationScore: accum.value,
-                accumInterpretation: accum.interpretation,
-                whaleActivity: whale.value,
-                whaleLevel: whale.level,
-                retailInstitutionalRatio: clamp(riRatio, 0, 500),
-                pressureIndex: pressure.value,
-                pressureDirection: pressure.direction,
-                trendStrength: trend.value,
-                trendLevel: trend.level,
-                trendDirection: trend.direction,
-                signal: signal
+            // Build analytics-style nested object
+            const nested = {
+                smi: smi,
+                intensity: intensity,
+                divergence: divergence,
+                accumScore: accum,
+                whale: whale,
+                riRatio: clamp(riRatio, 0, 500),
+                pressure: pressure,
+                trendStrengthObj: trend,
+                breakout: { value: 0, direction: 'UNKNOWN', confidence: 0, className: 'text-muted' },
+                lsi: { value: 0, level: 'N/A', className: 'text-muted' },
+                marketMode: { mode: 'UNKNOWN', confidence: 0, className: 'text-muted' },
+                smartSignal: signal
             };
+
+            if (typeof EMIT_LEGACY === 'undefined' || EMIT_LEGACY) {
+                // Merge legacy flattened keys for backward compatibility
+                return Object.assign({
+                    smartMoneyIndex: smi.value,
+                    smiNormalized: smi.normalized,
+                    smiInterpretation: smi.interpretation,
+                    tradeIntensity: intensity.value,
+                    intensityNormalized: intensity.normalized,
+                    intensityLevel: intensity.level,
+                    momentumDivergence: divergence.value,
+                    divergenceInterpretation: divergence.interpretation,
+                    accumulationScore: accum.value,
+                    accumInterpretation: accum.interpretation,
+                    whaleActivity: whale.value,
+                    whaleLevel: whale.level,
+                    retailInstitutionalRatio: clamp(riRatio, 0, 500),
+                    pressureIndex: pressure.value,
+                    pressureDirection: pressure.direction,
+                    trendStrength: trend.value,
+                    trendLevel: trend.level,
+                    trendDirection: trend.direction,
+                    signal: signal
+                }, nested);
+            }
+
+            // When legacy emission is disabled, return only nested analytics-style object
+            return nested;
         }
 
         // ============ Analytics Formulas ============
@@ -359,6 +381,9 @@
         }
 
         // ============ Message Handler ============
+        // Runtime-controlled flag to enable/disable emitting legacy flattened keys
+        let EMIT_LEGACY = true;
+
         self.onmessage = function(e) {
             const { id, type, payload } = e.data;
             
@@ -398,6 +423,13 @@
                     case 'ping':
                         result = { pong: true, time: Date.now() };
                         break;
+                    case 'config':
+                        // Accept runtime config from main thread
+                        if (payload && typeof payload.emitLegacy !== 'undefined') {
+                            EMIT_LEGACY = !!payload.emitLegacy;
+                        }
+                        result = { ok: true, emitLegacy: EMIT_LEGACY };
+                        break;
                         
                     default:
                         throw new Error('Unknown task type: ' + type);
@@ -423,8 +455,8 @@
                 };
             }
             
-            // Frequency metrics - use _analytics if available, fallback to WebSocket raw fields
-            const a = data._analytics || {};
+            // Frequency metrics - prefer nested 'analytics', fallback to legacy '_analytics' or raw fields
+            const a = data.analytics || data._analytics || {};
             const tf = a.timeframes || {};
             const freqMetrics = {
                 buy1m: (tf['1m'] && tf['1m'].freqBuy) || Number(data.freq_buy_1MENIT) || 0,
@@ -469,8 +501,8 @@
         
         // ============ Microstructure Metrics ============
         function computeMicrostructureMetrics(data) {
-            // Use pre-computed analytics if available, fallback to raw data
-            const a = data._analytics || {};
+            // Use pre-computed analytics if available, prefer nested 'analytics', fallback to legacy '_analytics' or raw data
+            const a = data.analytics || data._analytics || {};
             const tf = a.timeframes || {};
             
             // Get values from analytics first, then raw WebSocket field names
@@ -564,12 +596,22 @@
         // ============ Recommendation Score ============
         function calculateRecommendationScore(data, smart) {
             let score = 50; // neutral
-            
+
+            // Helper to read metric value from either legacy flattened keys or nested objects
+            const getMetricValue = (obj, legacyKey, nestedKey) => {
+                if (!obj) return 0;
+                const legacy = obj[legacyKey];
+                if (typeof legacy !== 'undefined' && !isNaN(Number(legacy))) return Number(legacy) || 0;
+                const nested = obj[nestedKey];
+                if (nested && typeof nested.value !== 'undefined' && !isNaN(Number(nested.value))) return Number(nested.value) || 0;
+                return 0;
+            };
+
             // Price position factor
             const pricePos = Number(data.price_position) || 50;
             if (pricePos < 30) score += 10;
             else if (pricePos > 70) score -= 10;
-            
+
             // Volume ratio factor
             const volBuy = Number(data.count_VOL_minute_120_buy) || 0;
             const volSell = Number(data.count_VOL_minute_120_sell) || 0;
@@ -578,17 +620,21 @@
             else if (volRatio < 0.5) score -= 15;
             else if (volRatio > 1.5) score += 8;
             else if (volRatio < 0.67) score -= 8;
-            
-            // Smart metrics factor
-            if (smart.smartMoneyIndex > 60) score += 10;
-            else if (smart.smartMoneyIndex < 40) score -= 10;
-            
-            if (smart.pressureIndex > 30) score += 8;
-            else if (smart.pressureIndex < -30) score -= 8;
-            
-            if (smart.accumulationScore > 60) score += 5;
-            else if (smart.accumulationScore < 40) score -= 5;
-            
+
+            // Smart metrics factor (support both legacy and nested shapes)
+            const smiVal = getMetricValue(smart, 'smartMoneyIndex', 'smi');
+            const pressureVal = getMetricValue(smart, 'pressureIndex', 'pressure');
+            const accumVal = getMetricValue(smart, 'accumulationScore', 'accumScore');
+
+            if (smiVal > 60) score += 10;
+            else if (smiVal < 40) score -= 10;
+
+            if (pressureVal > 30) score += 8;
+            else if (pressureVal < -30) score -= 8;
+
+            if (accumVal > 60) score += 5;
+            else if (accumVal < 40) score -= 5;
+
             return clamp(score, 0, 100);
         }
     `;
@@ -603,6 +649,7 @@
             this.taskId = 0;
             this.busyWorkers = new Set();
             this.initialized = false;
+            this.emitLegacy = true; // default: keep emitting legacy flattened keys
             this.stats = {
                 tasksCompleted: 0,
                 tasksQueued: 0,
@@ -622,6 +669,11 @@
                 worker.onmessage = (e) => this._handleMessage(worker, e);
                 worker.onerror = (e) => this._handleError(worker, e);
                 this.workers.push(worker);
+            }
+
+            // Send initial config to workers (emit legacy keys enabled/disabled)
+            for (const w of this.workers) {
+                try { w.postMessage({ type: 'config', payload: { emitLegacy: !!this.emitLegacy } }); } catch (e) { /* ignore */ }
             }
             
             this.initialized = true;
@@ -733,6 +785,14 @@
             this.workers = [];
             this.initialized = false;
             console.log('[WorkerPool] Terminated');
+        }
+
+        // Toggle whether workers emit legacy flattened keys (runtime)
+        setEmitLegacy(flag) {
+            this.emitLegacy = !!flag;
+            for (const w of this.workers) {
+                try { w.postMessage({ type: 'config', payload: { emitLegacy: this.emitLegacy } }); } catch (e) { /* ignore */ }
+            }
         }
     }
 

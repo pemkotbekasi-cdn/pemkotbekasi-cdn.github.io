@@ -161,6 +161,9 @@ function createAndAttach() {
     
     updateWsStatusUI('connecting');
     ws = new WebSocket('wss://eofficev2.bekasikota.go.id/okx-ws');
+
+    // ws = new WebSocket('ws://localhost:8089');
+
     attachHandlers(ws);
     window.ws = ws;
 }

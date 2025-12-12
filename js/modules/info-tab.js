@@ -103,7 +103,16 @@
         if (core && core.computeAllSmartMetrics) {
             return core.computeAllSmartMetrics(data);
         }
-        // Fallback empty metrics
+        // Prefer unified helper if present (synthesizes from data._analytics or worker results)
+        if (typeof getUnifiedSmartMetrics === 'function') {
+            const unified = getUnifiedSmartMetrics(data);
+            if (unified) return unified;
+        }
+        // Fallback to legacy computeSmartMetrics if available
+        if (typeof computeSmartMetrics === 'function') {
+            return computeSmartMetrics(data);
+        }
+        // Final fallback empty metrics
         return {
             smi: { value: 0, interpretation: 'N/A', className: 'text-muted' },
             intensity: { value: 0, level: 'N/A', className: 'text-muted' },
@@ -279,7 +288,8 @@
             const lastRaw = window._lastWsRaw || null;
             const lastCoin = window._lastReceivedCoin || null;
             const lastData = lastRaw || (lastCoin ? (coinDataMap[lastCoin] || null) : null);
-            const analytics = (lastData && lastData._analytics) ? lastData._analytics : {};
+            const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(lastData) : (lastData && (lastData.analytics || lastData._analytics)) ? (lastData.analytics || lastData._analytics) : {};
+            const analytics = metrics;
             const history = (lastData && Array.isArray(lastData._history)) ? lastData._history.slice(-120) : [];
             const priceNow = Number(lastData && lastData.last) || 0;
             const priceHigh = Number(lastData && lastData.high) || priceNow;
@@ -391,26 +401,26 @@
                     <div class="row g-2 small">
                         <div class="col-md-4">
                             <div class="p-2 rounded" style="background:rgba(0,0,0,0.4)">
-                                <div><strong>SMI:</strong> <span class="${smartMetrics.smi.className}">${fmtNum(smartMetrics.smi.value, 0)}</span> <small class="text-muted">${smartMetrics.smi.interpretation}</small></div>
-                                <div><strong>Intensity:</strong> <span class="${smartMetrics.intensity.className}">${fmtPct(smartMetrics.intensity.value, 0)}</span> <small class="text-muted">${smartMetrics.intensity.level}</small></div>
-                                <div><strong>Divergence:</strong> <span class="${smartMetrics.divergence.className}">${smartMetrics.divergence.interpretation}</span></div>
-                                <div><strong>Accum Score:</strong> <span class="${smartMetrics.accumScore.className}">${fmtNum(smartMetrics.accumScore.value, 0)}</span> <small class="text-muted">${smartMetrics.accumScore.interpretation}</small></div>
+                                <div><strong>SMI:</strong> <span class="${smartMetrics.smi.className || ''}">${fmtNum(smartMetrics.smi.value, 0)}</span> <small class="text-muted">${smartMetrics.smi.interpretation}</small></div>
+                                <div><strong>Intensity:</strong> <span class="${smartMetrics.intensity.className || ''}">${fmtPct(smartMetrics.intensity.value, 0)}</span> <small class="text-muted">${smartMetrics.intensity.level}</small></div>
+                                <div><strong>Divergence:</strong> <span class="${smartMetrics.divergence.className || ''}">${smartMetrics.divergence.interpretation}</span></div>
+                                <div><strong>Accum Score:</strong> <span class="${smartMetrics.accumScore.className || ''}">${fmtNum(smartMetrics.accumScore.value, 0)}</span> <small class="text-muted">${smartMetrics.accumScore.interpretation}</small></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="p-2 rounded" style="background:rgba(0,0,0,0.4)">
-                                <div><strong>Whale:</strong> <span class="${smartMetrics.whale.className}">${fmtNum(smartMetrics.whale.value, 0)}</span> <small class="text-muted">${smartMetrics.whale.level}</small></div>
-                                <div><strong>R/I Ratio:</strong> <span class="${smartMetrics.riRatio.className}">${smartMetrics.riRatio.type}</span></div>
-                                <div><strong>Pressure:</strong> <span class="${smartMetrics.pressure.className}">${fmtSign(smartMetrics.pressure.value, 0)}</span> <small class="text-muted">${smartMetrics.pressure.direction}</small></div>
-                                <div><strong>Trend:</strong> <span class="${smartMetrics.trendStrength.className}">${fmtPct(smartMetrics.trendStrength.value, 0)}</span> <small class="text-muted">${smartMetrics.trendStrength.level} ${smartMetrics.trendStrength.direction}</small></div>
+                                <div><strong>Whale:</strong> <span class="${smartMetrics.whale.className || ''}">${fmtNum(smartMetrics.whale.value, 0)}</span> <small class="text-muted">${smartMetrics.whale.level}</small></div>
+                                <div><strong>R/I Ratio:</strong> <span class="${(smartMetrics.riRatio && smartMetrics.riRatio.className) ? smartMetrics.riRatio.className : ''}">${(smartMetrics.riRatio && typeof smartMetrics.riRatio === 'object') ? Math.round(smartMetrics.riRatio.value) : Math.round(smartMetrics.riRatio || 0)}</span></div>
+                                <div><strong>Pressure:</strong> <span class="${smartMetrics.pressure.className || ''}">${fmtSign(smartMetrics.pressure.value, 0)}</span> <small class="text-muted">${smartMetrics.pressure.direction}</small></div>
+                                <div><strong>Trend:</strong> <span class="${smartMetrics.trendStrength.className || ''}">${fmtPct(smartMetrics.trendStrength.value, 0)}</span> <small class="text-muted">${smartMetrics.trendStrength.level} ${smartMetrics.trendStrength.direction}</small></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="p-2 rounded" style="background:rgba(0,0,0,0.4)">
-                                <div><strong>Breakout%:</strong> <span class="${smartMetrics.breakout.className}">${fmtPct(smartMetrics.breakout.value, 0)}</span> <small class="text-muted">${smartMetrics.breakout.direction}</small></div>
-                                <div><strong>LSI:</strong> <span class="${smartMetrics.lsi.className}">${fmtNum(smartMetrics.lsi.value, 1)}</span> <small class="text-muted">${smartMetrics.lsi.level}</small></div>
-                                <div><strong>Mode:</strong> <span class="${smartMetrics.marketMode.className}">${smartMetrics.marketMode.mode}</span> <small class="text-muted">(${fmtNum(smartMetrics.marketMode.confidence, 0)}%)</small></div>
-                                <div><strong>Signal:</strong> <span class="${smartMetrics.smartSignal.className}">${smartMetrics.smartSignal.signal}</span> <small class="text-muted">(${smartMetrics.smartSignal.confidence}%)</small></div>
+                                <div><strong>Breakout%:</strong> <span class="${smartMetrics.breakout.className || ''}">${fmtPct(smartMetrics.breakout.value, 0)}</span> <small class="text-muted">${smartMetrics.breakout.direction}</small></div>
+                                <div><strong>LSI:</strong> <span class="${smartMetrics.lsi.className || ''}">${fmtNum(smartMetrics.lsi.value, 1)}</span> <small class="text-muted">${smartMetrics.lsi.level}</small></div>
+                                <div><strong>Mode:</strong> <span class="${smartMetrics.marketMode.className || ''}">${smartMetrics.marketMode.mode}</span> <small class="text-muted">(${fmtNum(smartMetrics.marketMode.confidence, 0)}%)</small></div>
+                                <div><strong>Signal:</strong> <span class="${(smartMetrics.smartSignal && smartMetrics.smartSignal.className) ? smartMetrics.smartSignal.className : ''}">${(smartMetrics.smartSignal && smartMetrics.smartSignal.signal) ? smartMetrics.smartSignal.signal : 'HOLD'}</span> <small class="text-muted">(${(smartMetrics.smartSignal && smartMetrics.smartSignal.confidence) || 0}%)</small></div>
                             </div>
                         </div>
                     </div>
