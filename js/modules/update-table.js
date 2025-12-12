@@ -1395,19 +1395,33 @@
             const smartText = (metrics && metrics.smartSignal && metrics.smartSignal.signal ? metrics.smartSignal.signal : 'HOLD') + ' (' + ((metrics && metrics.smartSignal && metrics.smartSignal.confidence) || 0) + '%)';
             const pricePos = (metrics && metrics.pricePosition !== undefined && Number.isFinite(Number(metrics.pricePosition))) ? Math.round(Number(metrics.pricePosition)) : (data && Number.isFinite(Number(data.pricePosition)) ? Math.round(Number(data.pricePosition)) : 50);
             const rec = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePos, null, false) : null;
+
+            function mapSignalClass(signal) {
+                if (!signal) return '';
+                const s = String(signal).toUpperCase();
+                if (s.indexOf('BUY') !== -1) return 'recommendation-buy';
+                if (s.indexOf('SELL') !== -1) return 'recommendation-sell';
+                if (s.indexOf('HOLD') !== -1) return 'recommendation-hold';
+                return '';
+            }
+
+            const mappedSignalClass = mapSignalClass(metrics && metrics.smartSignal && metrics.smartSignal.signal);
+
             if (rec && rec.recommendation) {
                 sigCell.textContent = smartText + ' · Rec: ' + rec.recommendation + ' (' + (rec.confidence || 0) + '%)';
                 const cls = [];
+                if (mappedSignalClass) cls.push(mappedSignalClass);
                 if (metrics.smartSignal && metrics.smartSignal.className) cls.push(metrics.smartSignal.className);
                 if (rec.className) cls.push(rec.className);
                 sigCell.className = cls.join(' ') || '';
             } else {
                 sigCell.textContent = smartText;
-                sigCell.className = (metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '';
+                sigCell.className = mappedSignalClass || ((metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '');
             }
         } catch (e) {
             sigCell.textContent = (metrics.smartSignal && metrics.smartSignal.signal ? metrics.smartSignal.signal : 'HOLD') + ' (' + ((metrics.smartSignal && metrics.smartSignal.confidence) || 0) + '%)';
-            sigCell.className = (metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '';
+            const mapCls = (function(s){ if(!s) return ''; s=String(s).toUpperCase(); if(s.indexOf('BUY')!==-1) return 'recommendation-buy'; if(s.indexOf('SELL')!==-1) return 'recommendation-sell'; if(s.indexOf('HOLD')!==-1) return 'recommendation-hold'; return ''; })(metrics.smartSignal && metrics.smartSignal.signal);
+            sigCell.className = mapCls || ((metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '');
         }
     }
 
