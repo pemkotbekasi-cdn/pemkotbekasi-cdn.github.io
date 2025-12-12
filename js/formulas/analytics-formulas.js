@@ -251,7 +251,7 @@ function calculateRecommendation(data, pricePosition, timeframe, applyState = fa
     if (!data) {
         return { recommendation: 'HOLD', confidence: 0, className: 'recommendation-hold', score: 0 };
     }
-    const a = data._analytics || {};
+    const a = data && (data.analytics || data._analytics) ? (data.analytics || data._analytics) : {};
     const volDur2h = a.volDurability2h_percent ?? getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
     const volDur24h = a.volDurability24h_percent ?? getNumeric(data, 'percent_sum_VOL_overall_buy', 'percent_vol_buy_24h');
     const volBuy2h = a.volBuy2h ?? getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT', 'vol_buy_2jam');
