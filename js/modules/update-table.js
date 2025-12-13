@@ -5,13 +5,14 @@
  *               advancedSortState, compareWithComparator, showInsightTab, 
  *               maybeRenderHeavyTab, renderInfoTab, renderSignalLab, etc.
  */
-
+ 
 (function () {
     'use strict';
 
     // ===================== DOM refs (will be cached on first call) =====================
     let summaryBody, volBody, volRatioBody, spikeBody, recsBody, microBody;
     let freqBody, freqRatioBody, smartBody; // New tabs
+    let priceMovesBody;
     let sortBySelect, recTimeframeSelect;
     let useAtrRecs, tpMinInput, tpMaxInput, slMaxInput, confSensitivity;
 
@@ -26,6 +27,7 @@
         freqBody = document.getElementById('freqBody');
         freqRatioBody = document.getElementById('freqRatioBody');
         smartBody = document.getElementById('smartBody');
+        priceMovesBody = document.getElementById('priceMovesBody');
         sortBySelect = document.getElementById('sortBy');
         recTimeframeSelect = document.getElementById('recTimeframe');
         useAtrRecs = document.getElementById('useAtrRecs');
@@ -35,10 +37,62 @@
         confSensitivity = document.getElementById('confSensitivity');
     }
 
+    function renderPriceMovesRow(body, coin, data) {
+        const row = body.insertRow();
+        row.dataset.coin = coin;
+        row.insertCell(0).textContent = coin;
+
+        const tfKeys = [
+            'price_move_1MENIT', 'price_move_5MENIT', 'price_move_10MENIT', 'price_move_15MENIT',
+            'price_move_20MENIT', 'price_move_30MENIT', 'price_move_1JAM', 'price_move_2JAM', 'price_move_24JAM'
+        ];
+        const baseOpen = (data.open !== undefined && data.open !== null) ? Number(data.open) : null;
+        for (let i = 0; i < tfKeys.length; i++) {
+            const key = tfKeys[i];
+            const cell = row.insertCell(i + 1);
+            const v = (data && data[key] !== undefined) ? Number(data[key]) : null;
+            if (!Number.isFinite(v)) { cell.textContent = '-'; cell.className = 'text-muted'; }
+            else {
+                // Show the raw value as provided in the payload (preserve exact Redis/raw string if present)
+                const raw = (data && Object.prototype.hasOwnProperty.call(data, key)) ? data[key] : v;
+                cell.textContent = (raw === undefined || raw === null) ? String(v) : String(raw);
+                cell.className = v > 0 ? 'text-success' : v < 0 ? 'text-danger' : 'text-muted';
+                if (baseOpen && baseOpen !== 0) {
+                    const pct = (v / baseOpen) * 100;
+                    const span = document.createElement('div');
+                    span.className = 'small text-muted';
+                    span.textContent = `(${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)`;
+                    cell.appendChild(span);
+                }
+            }
+        }
+
+        const upCell = row.insertCell(tfKeys.length + 1);
+        const ut = data && (data.update_time || data.update_time_VOLCOIN) ? (new Date(Number(data.update_time) || Number(data.update_time_VOLCOIN) || Date.now()).toLocaleString()) : '-';
+        upCell.textContent = ut;
+    }
+
+    
+
     // ===================== Formatters =====================
     const fmtNum = (val, digits = 2) => {
         const n = Number(val);
         return Number.isFinite(n) ? n.toFixed(digits) : '-';
+    };
+    // fmtSmart: show `digits` decimals for normal numbers, but for very small
+    // absolute values show more precision (up to `maxSmallDigits`) so tiny
+    // values like 0.000004253 are displayed meaningfully instead of `0.000`.
+    const fmtSmart = (val, digits = 3, maxSmallDigits = 8) => {
+        const n = Number(val);
+        if (!Number.isFinite(n)) return '-';
+        const abs = Math.abs(n);
+        if (abs === 0) return '0';
+        if (abs < Math.pow(10, -digits)) {
+            const needed = Math.min(maxSmallDigits, Math.max(digits, Math.ceil(-Math.log10(abs)) + 2));
+            const s = n.toFixed(needed);
+            return s.replace(/(\.\d*?)(0+)$/,'$1').replace(/\.$/, '');
+        }
+        return n.toFixed(digits).replace(/(\.\d*?)(0+)$/,'$1').replace(/\.$/, '');
     };
     const fmtPct = (val, digits = 1) => {
         const n = Number(val);
@@ -142,8 +196,8 @@
         const sellAliasesArr = Array.isArray(sellAliases) ? sellAliases : [sellAliases].filter(Boolean);
         let buy = normalize(getNumeric(data, ...buyAliasesArr));
         let sell = normalize(getNumeric(data, ...sellAliasesArr));
-        if (buy === 0 && analyticsBuyKey) buy = normalize(analytics[analyticsBuyKey]);
-        if (sell === 0 && analyticsSellKey) sell = normalize(analytics[analyticsSellKey]);
+        if (buy === 0 && analyticsBuyKey) buy = normalize(metrics[analyticsBuyKey]);
+        if (sell === 0 && analyticsSellKey) sell = normalize(metrics[analyticsSellKey]);
         // Use centralized calculateVolRatio if available, else inline
         if (typeof window.calculateVolRatio === 'function') {
             return window.calculateVolRatio(buy, sell);
@@ -402,9 +456,17 @@
         if (volBody) volBody.innerHTML = '';
         if (volRatioBody) volRatioBody.innerHTML = '';
         if (recsBody) recsBody.innerHTML = '';
+        if (priceMovesBody) priceMovesBody.innerHTML = '';
         const volDurBody = document.getElementById('volDurBody');
         if (volDurBody) volDurBody.innerHTML = '';
         if (spikeBody) spikeBody.innerHTML = '';
+        // Dispose existing Bootstrap popovers to avoid stale instances when re-rendering
+        try {
+            if (window.bootstrap && window.bootstrap.Popover) {
+                const els = document.querySelectorAll('[data-bs-toggle="popover"]');
+                els.forEach(el => { try { const i = bootstrap.Popover.getInstance(el); if (i) i.dispose(); } catch (e) { } });
+            }
+        } catch (e) { }
         // DON'T clear microBody here - handled by async renderer to prevent flicker
         if (freqBody) freqBody.innerHTML = '';
         if (freqRatioBody) freqRatioBody.innerHTML = '';
@@ -493,12 +555,20 @@
                 return coinKeyA.localeCompare(coinKeyB);
             });
 
+        // Debug: log row/limit/filter counts when unexpected small result observed
+        try {
+            const scount = Array.isArray(sortedCoins) ? sortedCoins.length : 0;
+            if (scount <= 1 || scount < (window.rowLimit || 5)) {
+                console.debug('[updateTable] debug sortedCoins:', { count: scount, rowLimit: (window.rowLimit !== undefined ? window.rowLimit : 5), filterText });
+            }
+        } catch (e) { /* swallow */ }
+
         // Render rows
         for (const [coinKey, data] of sortedCoins) {
             if (rowCount >= rowLimit) break;
 
             const coin = coinKey;
-            const price = (data.last || 0).toFixed(4);
+            const price = fmtSmart(data.last || 0, 4, 8);
             const change = data.percent_change || 0;
             const volBuy = getNumeric(data, 'count_VOL_minute_120_buy', 'vol_buy_2JAM', 'vol_buy_120MENIT');
             const volSell = getNumeric(data, 'count_VOL_minute_120_sell', 'vol_sell_2JAM', 'vol_sell_120MENIT');
@@ -542,6 +612,8 @@
             // Detect spikes
             detectSpikes(data, coin, spikeRows, pricePosition);
 
+            
+
             // Summary row
             if (summaryBody) {
                 renderSummaryRow(summaryBody, coin, data, price, change, pricePosition,
@@ -576,6 +648,15 @@
             // Freq Ratio row
             if (freqRatioBody) {
                 renderFreqRatioRow(freqRatioBody, coin, data);
+            }
+
+            // Price Moves row
+            // Price Moves row: only render if payload contains any price_move_* fields
+            if (priceMovesBody) {
+                try {
+                    const hasMoves = Object.keys(data || {}).some(k => /^price_move_/i.test(k));
+                    if (hasMoves) renderPriceMovesRow(priceMovesBody, coin, data);
+                } catch (e) { console.warn('priceMoves row insert failed for', coin, e); }
             }
 
             // Smart Analysis row - sync fallback (async batch below)
@@ -620,6 +701,70 @@
             maybeRenderHeavyTab('risk', renderRiskMonitorTab, { interval: 3000 });
             maybeRenderHeavyTab('events', renderEventWatchTab, { interval: 2500, requireActive: false });
         }
+
+        // Populate Price Moves tab with all coins that contain price_move_* fields (respecting current filter/sort)
+        try {
+            if (priceMovesBody) {
+                priceMovesBody.innerHTML = '';
+                let found = 0;
+                const examples = [];
+                const map = coinDataMap || window.coinDataMap || {};
+                const mapKeys = Object.keys(map || {});
+                console.debug('[priceMoves] coinDataMap size:', mapKeys.length, 'sample keys:', mapKeys.slice(0, 10));
+                // Print sample field keys for the first few coins to inspect payload shape
+                for (let i = 0; i < Math.min(5, mapKeys.length); i++) {
+                    try {
+                        const k = mapKeys[i];
+                        const d = map[k] || {};
+                        console.debug('[priceMoves] sample coin fields for', k, Object.keys(d).slice(0, 40));
+                    } catch (e) { /* ignore */ }
+                }
+                for (const [coinKey, data] of Object.entries(map)) {
+                    try {
+                        if (!data) continue;
+                        // apply active filter if present
+                        if (filterText && !String(coinKey).toLowerCase().includes(filterText)) continue;
+                        if (!passesAdvancedFiltersWrapper(data)) continue;
+                        const hasMoves = Object.keys(data || {}).some(k => /^price_move_/i.test(k));
+                        if (hasMoves) {
+                            renderPriceMovesRow(priceMovesBody, coinKey, data);
+                            found++;
+                            if (examples.length < 6) {
+                                const keys = Object.keys(data).filter(k => /^price_move_/i.test(k));
+                                examples.push({ coin: coinKey, keys: keys.slice(0, 5), sample: data[keys[0]] });
+                            }
+                            if (found >= rowLimit) break;
+                        }
+                    } catch (e) { /* swallow per-row errors */ }
+                }
+                console.debug('[priceMoves] populated rows:', found, 'examples:', examples);
+                if (found === 0) {
+                    try {
+                        const r = priceMovesBody.insertRow();
+                        const c = r.insertCell(0);
+                        c.colSpan = 11;
+                        c.className = 'text-muted small';
+                        c.textContent = 'No price_move_* fields found in current data. Paste a sample payload or check console for details.';
+                    } catch (e) { /* ignore DOM errors */ }
+                }
+            }
+        } catch (e) { console.warn('populate Price Moves failed', e); }
+
+        // Initialize Bootstrap popovers for Price Moves buttons
+        try {
+            if (window.bootstrap && window.bootstrap.Popover) {
+                const popEls = document.querySelectorAll('.price-move-pop');
+                popEls.forEach(el => {
+                    try {
+                        const existing = bootstrap.Popover.getInstance(el);
+                        if (existing) existing.dispose();
+                    } catch (e) { }
+                    try { new bootstrap.Popover(el); } catch (e) { }
+                });
+            }
+        } catch (e) { /* ignore */ }
+
+        
     }
 
     // ===================== Row Renderers =====================
@@ -646,15 +791,39 @@
         };
 
         vr.insertCell(0).textContent = coin;
-        vr.insertCell(1).textContent = fmtRatio(vb1, vs1);
-        vr.insertCell(2).textContent = fmtRatio(vb5, vs5);
-        vr.insertCell(3).textContent = fmtRatio(vb10, vs10);
-        vr.insertCell(4).textContent = fmtRatio(vb15, vs15);
-        vr.insertCell(5).textContent = fmtRatio(vb20, vs20);
-        vr.insertCell(6).textContent = fmtRatio(vb30, vs30);
-        vr.insertCell(7).textContent = fmtRatio(vb60, vs60);
-        vr.insertCell(8).textContent = fmtRatio(vb2h, vs2h);
-        vr.insertCell(9).textContent = fmtRatio(vb24, vs24);
+
+        const makeRatio = (buy, sell) => {
+            const b = normalize(buy);
+            const s = normalize(sell);
+            if (s > 0) return Math.round((b / s) * 100);
+            if (b > 0) return null; // represent ∞
+            return 0;
+        };
+
+        const makeCell = (idx, buy, sell) => {
+            const pct = makeRatio(buy, sell);
+            const text = (pct === null) ? '∞' : pct + '%';
+            const cell = vr.insertCell(idx);
+            cell.textContent = text;
+            if (pct === null || pct > 200) {
+                cell.className = 'text-success fw-bold';
+            } else if (pct < 50) {
+                cell.className = 'text-danger fw-bold';
+            } else {
+                cell.className = 'text-warning fw-bold';
+            }
+            return cell;
+        };
+
+        makeCell(1, vb1, vs1);
+        makeCell(2, vb5, vs5);
+        makeCell(3, vb10, vs10);
+        makeCell(4, vb15, vs15);
+        makeCell(5, vb20, vs20);
+        makeCell(6, vb30, vs30);
+        makeCell(7, vb60, vs60);
+        makeCell(8, vb2h, vs2h);
+        makeCell(9, vb24, vs24);
 
         // Last Change - use percent_change directly from WebSocket data
         const lastChangeVal = parseFloat(data.percent_change) || 0;
@@ -663,6 +832,8 @@
         lcCell.textContent = (lastChangeVal > 0 ? '+' : '') + lastChangeVal.toFixed(2) + '%';
         lcCell.className = lastChangeVal > 0 ? 'text-success' : lastChangeVal < 0 ? 'text-danger' : 'text-muted';
     }
+
+    
 
     function detectSpikes(data, coin, spikeRows, pricePosition) {
         try {
@@ -710,50 +881,46 @@
     }
 
     function renderSummaryRow(body, coin, data, price, change, pricePosition, volBuy2h, volSell2h, volBuy24h, volSell24h) {
-        let row = body.insertRow();
+        const row = body.insertRow();
         row.classList.add('summary-row');
         row.style.cursor = 'pointer';
         row.dataset.coin = coin;
         row.onclick = () => { if (typeof showInsightTab === 'function') showInsightTab(coin, data); };
 
-        const coinCell = row.insertCell(0);
-        coinCell.textContent = coin;
-        coinCell.className = 'text-primary';
-        coinCell.title = 'Click for insights';
-        row.insertCell(1).textContent = price;
+        // Columns: Coin, Price, Change %, Price Pos, Recommendation, Risk, VolRatio(2h), VolBuy(2h), VolSell(2h), VolDur(2h), VolBuy(24h), VolSell(24h), Update
+        row.insertCell(0).textContent = coin;
+        const priceRaw = (data && Object.prototype.hasOwnProperty.call(data, 'last')) ? String(data.last) : String(price);
+        row.insertCell(1).textContent = priceRaw;
 
-        let cell = row.insertCell(2);
-        cell.textContent = change + '%';
-        cell.className = change > 0 ? 'text-success fw-bold' : change < 0 ? 'text-danger fw-bold' : 'text-muted';
+        const changeVal = (isFinite(change) ? Number(change) : 0);
+        const changeCell = row.insertCell(2);
+        changeCell.textContent = `${changeVal > 0 ? '+' : ''}${changeVal.toFixed(2)}%`;
+        changeCell.className = changeVal > 0 ? 'text-success fw-bold' : changeVal < 0 ? 'text-danger fw-bold' : 'text-muted';
 
-        cell = row.insertCell(3);
-        cell.textContent = pricePosition + '%';
-        cell.className = getDurabilityClass(pricePosition);
+        const posCell = row.insertCell(3);
+        posCell.textContent = pricePosition + '%';
+        posCell.className = getDurabilityClass(pricePosition);
 
-        // Recommendation
         const selectedTf = (recTimeframeSelect && recTimeframeSelect.value) ? recTimeframeSelect.value : '120m';
         const recommendation = typeof calculateRecommendation === 'function' ? calculateRecommendation(data, pricePosition, selectedTf, true) : null;
-        cell = row.insertCell(4);
-        cell.textContent = recommendation && recommendation.recommendation ? `${recommendation.recommendation} (${recommendation.confidence || 0}%)` : 'HOLD';
-        cell.className = recommendation && recommendation.className ? recommendation.className : 'recommendation-hold';
+        const recCell = row.insertCell(4);
+        recCell.textContent = recommendation && recommendation.recommendation ? `${recommendation.recommendation} (${recommendation.confidence || 0}%)` : 'HOLD';
+        recCell.className = recommendation && recommendation.className ? recommendation.className : 'recommendation-hold';
 
-        // Risk
-        cell = row.insertCell(5);
         const _metricsSummary = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
         const riskScore = Number(data.risk_score || (_metricsSummary && _metricsSummary.riskScore) || 0);
-        cell.textContent = riskScore + '%';
-        cell.className = riskScore >= 67 ? 'text-danger fw-bold' : riskScore >= 40 ? 'text-warning fw-bold' : 'text-success fw-bold';
+        const riskCell = row.insertCell(5);
+        riskCell.textContent = riskScore + '%';
+        riskCell.className = riskScore >= 67 ? 'text-danger fw-bold' : riskScore >= 40 ? 'text-warning fw-bold' : 'text-success fw-bold';
 
-        // Volume Ratio 2h
         const volumeRatio2h = volSell2h > 0 ? (volBuy2h / volSell2h) * 100 : (volBuy2h > 0 ? null : 0);
-        cell = row.insertCell(6);
-        cell.textContent = volumeRatio2h === null ? '∞' : Math.round(volumeRatio2h) + '%';
-        cell.className = (volumeRatio2h === null || volumeRatio2h > 200) ? 'text-success fw-bold' : volumeRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
+        const vrCell = row.insertCell(6);
+        vrCell.textContent = volumeRatio2h === null ? '∞' : Math.round(volumeRatio2h) + '%';
+        vrCell.className = (volumeRatio2h === null || volumeRatio2h > 200) ? 'text-success fw-bold' : volumeRatio2h < 50 ? 'text-danger fw-bold' : 'text-warning fw-bold';
 
         row.insertCell(7).textContent = volBuy2h;
         row.insertCell(8).textContent = volSell2h;
 
-        // Vol Durability 2h
         let volDur2h = (typeof getUnifiedSmartMetrics === 'function' && getUnifiedSmartMetrics(data) && getUnifiedSmartMetrics(data).volDurability2h_percent !== null)
             ? Number(getUnifiedSmartMetrics(data).volDurability2h_percent)
             : getNumeric(data, 'percent_sum_VOL_minute_120_buy', 'percent_vol_buy_120min', 'percent_vol_buy_2jam');
@@ -761,9 +928,9 @@
             const total2h = (volBuy2h || 0) + (volSell2h || 0);
             volDur2h = total2h > 0 ? Math.round(((volBuy2h || 0) / total2h) * 100) : 0;
         }
-        cell = row.insertCell(9);
-        cell.textContent = (isNaN(volDur2h) ? 0 : volDur2h) + '%';
-        cell.className = getDurabilityClass(volDur2h);
+        const volDurCell = row.insertCell(9);
+        volDurCell.textContent = (isNaN(volDur2h) ? 0 : volDur2h) + '%';
+        volDurCell.className = getDurabilityClass(volDur2h);
 
         row.insertCell(10).textContent = volBuy24h;
         row.insertCell(11).textContent = volSell24h;
@@ -807,13 +974,66 @@
         const r = body.insertRow();
         r.insertCell(0).textContent = coin;
         r.insertCell(1).textContent = selectedTf;
-        r.insertCell(2).textContent = recTf.recommendation;
-        r.insertCell(3).textContent = `${recTf.confidence || 0}%`;
-        r.insertCell(4).textContent = priceNow || '-';
-        r.insertCell(5).textContent = tp;
-        r.insertCell(6).textContent = sl;
 
-        return recsRowCount + 1;
+        // Render one row per timeframe (or only the selected timeframe)
+        const allTfs = ['1m','5m','10m','30m','60m','120m','24h'];
+        const tfsToRender = (selectedTf && String(selectedTf).toLowerCase() !== 'all') ? [selectedTf] : allTfs;
+
+        for (const tf of tfsToRender) {
+            if (recsRowCount >= requestedRecsLimit) break;
+
+            const recLocal = (typeof calculateRecommendation === 'function') ? calculateRecommendation(data, pricePosition, tf, true) : { recommendation: 'HOLD', confidence: 0 };
+            const confLocal = (recLocal.confidence || 0) / 100;
+
+            let rangeFactorLocal = Math.min(tpMax, tpMin + confLocal * (tpMax - tpMin) * sens);
+            if (useAtrRecs && useAtrRecs.checked && data._history && typeof computeATR === 'function') {
+                try {
+                    const atr = computeATR(data._history, 14);
+                    if (atr > 0 && priceNow > 0) {
+                        const atrPct = (atr / priceNow) * sens;
+                        rangeFactorLocal = Math.min(tpMax, Math.max(tpMin, atrPct));
+                    }
+                } catch (e) { }
+            }
+
+            let tpLocal = '-', slLocal = '-';
+            if (priceNow > 0 && recLocal.recommendation === 'BUY') {
+                tpLocal = (priceNow * (1 + rangeFactorLocal)).toFixed(4);
+                slLocal = (priceNow * (1 - Math.min(slMax, Math.max(0.005, rangeFactorLocal / 2)))).toFixed(4);
+            } else if (priceNow > 0 && recLocal.recommendation === 'SELL') {
+                tpLocal = (priceNow * (1 - rangeFactorLocal)).toFixed(4);
+                slLocal = (priceNow * (1 + Math.min(slMax, Math.max(0.005, rangeFactorLocal / 2)))).toFixed(4);
+            }
+
+            const rr = body.insertRow();
+            rr.insertCell(0).textContent = coin;
+            rr.insertCell(1).textContent = tf;
+
+            const recCell = rr.insertCell(2);
+            recCell.textContent = recLocal.recommendation || 'HOLD';
+            try {
+                const recStr = (recLocal && recLocal.recommendation) ? String(recLocal.recommendation).toUpperCase() : '';
+                if (recStr.indexOf('BUY') !== -1) {
+                    recCell.className = 'recommendation-buy';
+                    recCell.style.color = '#00ff88';
+                } else if (recStr.indexOf('SELL') !== -1) {
+                    recCell.className = 'recommendation-sell';
+                    recCell.style.color = '#ff4757';
+                } else {
+                    recCell.className = 'recommendation-hold';
+                    recCell.style.color = '#ffd700';
+                }
+            } catch (e) { }
+
+            rr.insertCell(3).textContent = `${recLocal.confidence || 0}%`;
+            rr.insertCell(4).textContent = priceNow || '-';
+            rr.insertCell(5).textContent = tpLocal;
+            rr.insertCell(6).textContent = slLocal;
+
+            recsRowCount++;
+        }
+
+        return recsRowCount;
     }
 
     function renderVolRow(body, coin, data, vb1, vs1, vb5, vs5, vb10, vs10, vb15, vs15, vb20, vs20, vb30, vs30, vb60, vs60, vb2h, vs2h, vb24, vs24) {
@@ -1115,16 +1335,31 @@
         const row = body.insertRow();
         row.dataset.coin = coin;
 
+        // Use unified metrics for display values but read raw analytics/timeframes from the original data
         const metrics = (typeof getUnifiedSmartMetrics === 'function') ? getUnifiedSmartMetrics(data) : (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
-        const analytics = metrics;
-        const tf = (analytics && analytics.timeframes) ? analytics.timeframes : {};
+        const rawAnalytics = (data && (data.analytics || data._analytics)) ? (data.analytics || data._analytics) : {};
+        const tf = (rawAnalytics && rawAnalytics.timeframes) ? rawAnalytics.timeframes : {};
 
-        const getFreqRatio = (tfKey) => {
-            const tfData = tf[tfKey] || {};
-            const buy = tfData.freqBuy || 0;
-            const sell = tfData.freqSell || 0;
-            if (sell > 0) return Math.round((buy / sell) * 100);
-            if (buy > 0) return null; // Infinite ratio
+        // Support various timeframe key aliases: analytics may use '1h'/'2h' while other parts use '60m'/'120m'
+        const timeframeCols = [
+            { label: '1m', keys: ['1m'] },
+            { label: '5m', keys: ['5m'] },
+            { label: '10m', keys: ['10m'] },
+            { label: '30m', keys: ['30m'] },
+            { label: '1h', keys: ['60m', '1h'] },
+            { label: '2h', keys: ['120m', '2h'] },
+            { label: '24h', keys: ['24h'] }
+        ];
+
+        const getFreqRatio = (tfKeys) => {
+            // tfKeys can be array of aliases to try
+            for (const k of (Array.isArray(tfKeys) ? tfKeys : [tfKeys])) {
+                const tfData = tf[k] || {};
+                const buy = Number(tfData.freqBuy) || 0;
+                const sell = Number(tfData.freqSell) || 0;
+                const total = buy + sell;
+                if (total > 0) return Math.round((buy / total) * 100);
+            }
             return 0;
         };
 
@@ -1134,32 +1369,32 @@
         };
 
         const getRatioClass = (ratio) => {
-            if (ratio > 150) return 'text-success fw-bold';
-            if (ratio > 100) return 'text-success';
-            if (ratio < 50) return 'text-danger fw-bold';
-            if (ratio < 80) return 'text-danger';
+            // ratio is percent [0..100]
+            if (ratio >= 66) return 'text-success fw-bold';
+            if (ratio >= 55) return 'text-success';
+            if (ratio <= 33) return 'text-danger fw-bold';
+            if (ratio <= 45) return 'text-danger';
             return 'text-warning';
         };
 
         row.insertCell(0).textContent = coin;
 
-        const timeframes = ['1m', '5m', '10m', '30m', '60m', '120m', '24h'];
-        timeframes.forEach((tfKey, idx) => {
-            const ratio = getFreqRatio(tfKey);
+        timeframeCols.forEach((col, idx) => {
+            const ratio = getFreqRatio(col.keys);
             const cell = row.insertCell(idx + 1);
             cell.textContent = fmtRatio(ratio);
             cell.className = getRatioClass(ratio);
         });
 
         // Freq vs Avg 2h
-        const freqVsAvg = analytics.freqBuy_vs_avg_percent || 0;
+        const freqVsAvg = rawAnalytics.freqBuy_vs_avg_percent || 0;
         const vsAvgCell = row.insertCell(8);
         vsAvgCell.textContent = Math.round(freqVsAvg) + '%';
         vsAvgCell.className = freqVsAvg > 150 ? 'text-success fw-bold' : freqVsAvg > 100 ? 'text-success' : freqVsAvg < 50 ? 'text-danger' : 'text-warning';
 
         // Freq Spike (freq vs avg ratio)
-        const avgFreqBuy = analytics.avgFreqBuy2h || 1;
-        const freqBuy2h = analytics.freqBuy2h || 0;
+        const avgFreqBuy = rawAnalytics.avgFreqBuy2h || 1;
+        const freqBuy2h = rawAnalytics.freqBuy2h || 0;
         const freqSpike = avgFreqBuy > 0 ? freqBuy2h / avgFreqBuy : 0;
         const spikeCell = row.insertCell(9);
         spikeCell.textContent = freqSpike.toFixed(2) + 'x';
@@ -1407,17 +1642,29 @@
 
             const mappedSignalClass = mapSignalClass(metrics && metrics.smartSignal && metrics.smartSignal.signal);
 
-            if (rec && rec.recommendation) {
-                sigCell.textContent = smartText + ' · Rec: ' + rec.recommendation + ' (' + (rec.confidence || 0) + '%)';
-                const cls = [];
-                if (mappedSignalClass) cls.push(mappedSignalClass);
-                if (metrics.smartSignal && metrics.smartSignal.className) cls.push(metrics.smartSignal.className);
-                if (rec.className) cls.push(rec.className);
-                sigCell.className = cls.join(' ') || '';
-            } else {
-                sigCell.textContent = smartText;
-                sigCell.className = mappedSignalClass || ((metrics.smartSignal && metrics.smartSignal.className) ? metrics.smartSignal.className : '');
+            // Render only the smart signal (hide the unified recommendation text per user request)
+            sigCell.innerHTML = '';
+            const signalSpan = document.createElement('span');
+            signalSpan.textContent = (metrics && metrics.smartSignal && metrics.smartSignal.signal ? metrics.smartSignal.signal : 'HOLD') + ' (' + ((metrics && metrics.smartSignal && metrics.smartSignal.confidence) || 0) + '%)';
+
+            // Preserve non-recommendation classes from metrics
+            const existing = (metrics.smartSignal && metrics.smartSignal.className) ? String(metrics.smartSignal.className).split(/\s+/) : [];
+            existing.filter(c => c && !c.startsWith('recommendation-')).forEach(c => signalSpan.classList.add(c));
+
+            // Apply mapped class + inline styles to signalSpan
+            if (mappedSignalClass) signalSpan.classList.add(mappedSignalClass);
+            if (mappedSignalClass === 'recommendation-buy') {
+                signalSpan.style.color = '#00ff88';
+                signalSpan.style.textShadow = '0 0 4px rgba(0, 255, 136, 0.6)';
+            } else if (mappedSignalClass === 'recommendation-sell') {
+                signalSpan.style.color = '#ff4757';
+                signalSpan.style.textShadow = '0 0 4px rgba(255, 71, 87, 0.6)';
+            } else if (mappedSignalClass === 'recommendation-hold') {
+                signalSpan.style.color = '#ffd700';
+                signalSpan.style.textShadow = '0 0 4px rgba(255, 215, 0, 0.6)';
             }
+
+            sigCell.appendChild(signalSpan);
         } catch (e) {
             sigCell.textContent = (metrics.smartSignal && metrics.smartSignal.signal ? metrics.smartSignal.signal : 'HOLD') + ' (' + ((metrics.smartSignal && metrics.smartSignal.confidence) || 0) + '%)';
             const mapCls = (function(s){ if(!s) return ''; s=String(s).toUpperCase(); if(s.indexOf('BUY')!==-1) return 'recommendation-buy'; if(s.indexOf('SELL')!==-1) return 'recommendation-sell'; if(s.indexOf('HOLD')!==-1) return 'recommendation-hold'; return ''; })(metrics.smartSignal && metrics.smartSignal.signal);

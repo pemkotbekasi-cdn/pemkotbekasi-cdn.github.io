@@ -418,11 +418,35 @@
             const alerts = typeof loadAlertsFromStore === 'function' ? loadAlertsFromStore().slice(-10).reverse() : [];
             const events = (window._eventWatchBuffer || []).slice(-10).reverse();
             const spikeRows = (window._lastSpikeRows || []).slice(0, 5);
+            const esc = (s) => {
+                try { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); } catch (e) { return '' + s; }
+            };
+
             const alertHtml = alerts.length
-                ? alerts.map(a => `<div class="mb-1"><span class="badge bg-${a.type || 'secondary'}">${a.title || 'Alert'}</span> <small>${a.message || ''}</small></div>`).join('')
+                ? alerts.map(a => {
+                    const badge = `bg-${(a.type && String(a.type).replace(/[^a-z0-9\-]/gi,'') ) || 'secondary'}`;
+                    const coin = a && a.coin ? esc(a.coin) : '';
+                    const when = a && a.ts ? `<div class="text-muted small">${new Date(a.ts).toLocaleString()}</div>` : '';
+                    return `<div class="mb-2"><div><span class="badge ${badge} me-1">${coin ? coin + ' — ' : ''}${(a.type === 'danger' ? 'Alert' : 'Alert')}</span> <strong class="text-light">${coin || ''}</strong></div><div class="small text-light d-inline">${esc(a.message || '')}</div>${when}</div>`;
+                }).join('')
                 : '<div class="text-muted small">No recent alerts.</div>';
+
             const eventHtml = events.length
-                ? events.map(e => `<div class="mb-1"><span class="badge bg-info">${e.type || 'Event'}</span> <small>${e.description || JSON.stringify(e)}</small></div>`).join('')
+                ? events.map(e => {
+                    const type = esc(e.type || 'Event');
+                    const coin = esc(e.coin || '');
+                    const desc = e.description ? esc(e.description) : (e.messages ? esc(String(e.messages).replace(/\n/g,' • ')) : '');
+                    const pretty = esc(JSON.stringify(e, null, 2));
+                    return `
+                        <div class="mb-2">
+                            <div><span class="badge bg-info me-1">${type}</span> <strong class="text-light">${coin}</strong></div>
+                            <div class="small text-light" style="opacity:0.95;">${desc}</div>
+                            <details class="mt-1">
+                                <summary class="text-muted small">View JSON</summary>
+                                <pre class="bg-dark text-light p-2 rounded small" style="max-height:200px;overflow:auto;white-space:pre-wrap;">${pretty}</pre>
+                            </details>
+                        </div>`;
+                }).join('')
                 : '<div class="text-muted small">No recent events.</div>';
             const spikeHtml = spikeRows.length
                 ? spikeRows.map(s => `<div class="mb-1">${s.coin} ${s.timeframe}: <strong>${s.ratio.toFixed(2)}x</strong></div>`).join('')

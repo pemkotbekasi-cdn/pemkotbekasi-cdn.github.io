@@ -343,6 +343,50 @@
                     : null;
             } catch (e) { recSnapshot = null; }
 
+            // Build per-timeframe recommendation snapshot (include TP/SL computed from UI settings)
+            let perTfHtml = '';
+            try {
+                if (lastData && typeof calculateRecommendation === 'function') {
+                    const perTfs = ['1m','5m','10m','30m','60m','120m','24h'];
+                    const tpMinEl = document.getElementById('tpMin');
+                    const tpMaxEl = document.getElementById('tpMax');
+                    const slMaxEl = document.getElementById('slMax');
+                    const sensEl = document.getElementById('confSensitivity');
+                    const useAtrEl = document.getElementById('useAtrRecs');
+                    const tpMin = tpMinEl ? Math.max(0, Number(tpMinEl.value) || 2) / 100 : 0.02;
+                    const tpMax = tpMaxEl ? Math.max(tpMin, Number(tpMaxEl.value) || 10) / 100 : 0.10;
+                    const slMax = slMaxEl ? Math.max(0, Number(slMaxEl.value) || 5) / 100 : 0.05;
+                    const sens = sensEl ? Number(sensEl.value) || 1 : 1;
+                    const useAtr = useAtrEl ? !!useAtrEl.checked : false;
+
+                    for (const tf of perTfs) {
+                        try {
+                            const rec = calculateRecommendation(lastData, Math.round(pricePosition), tf, false) || { recommendation: 'HOLD', confidence: 0 };
+                            const conf = (rec.confidence || 0) / 100;
+                            let rangeFactor = Math.min(tpMax, tpMin + conf * (tpMax - tpMin) * sens);
+                            if (useAtr && lastData._history && typeof computeATR === 'function') {
+                                const atr = computeATR(lastData._history, 14);
+                                if (atr > 0 && priceNow > 0) {
+                                    const atrPct = (atr / priceNow) * sens;
+                                    rangeFactor = Math.min(tpMax, Math.max(tpMin, atrPct));
+                                }
+                            }
+                            let tp = '-';
+                            let sl = '-';
+                                if (priceNow > 0 && rec.recommendation === 'BUY') {
+                                tp = (priceNow * (1 + rangeFactor)).toFixed(4);
+                                sl = (priceNow * (1 - Math.min(slMax, Math.max(0.005, rangeFactor / 2)))).toFixed(4);
+                            } else if (priceNow > 0 && rec.recommendation === 'SELL') {
+                                tp = (priceNow * (1 - rangeFactor)).toFixed(4);
+                                sl = (priceNow * (1 + Math.min(slMax, Math.max(0.005, rangeFactor / 2)))).toFixed(4);
+                            }
+                            const cls = rec.recommendation === 'BUY' ? 'recommendation-buy' : (rec.recommendation === 'SELL' ? 'recommendation-sell' : 'recommendation-hold');
+                            perTfHtml += `<tr><td>${tf}</td><td class="${cls}">${rec.recommendation}</td><td>${rec.confidence || 0}%</td><td>${tp}</td><td>${sl}</td></tr>`;
+                        } catch (e) { perTfHtml += `<tr><td>${tf}</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>`; }
+                    }
+                }
+            } catch (e) { perTfHtml = ''; }
+
             // Compute Smart Metrics using AnalyticsCore
             const smartMetrics = lastData ? computeSmartMetricsForInfo(lastData) : null;
 
@@ -361,6 +405,17 @@
                 change5m: fmtPct(change5m, 2),
                 change15m: fmtPct(change15m, 2)
             };
+
+            // Price Move breakdown: show any price_move_* fields present in the payload
+            const priceMoveKeys = lastData ? Object.keys(lastData).filter(k => k && k.toString().toLowerCase().indexOf('price_move_') === 0) : [];
+            let priceMoveHtml = '';
+            if (priceMoveKeys.length) {
+                priceMoveKeys.sort().forEach(k => {
+                    const tf = k.replace(/^price_move_/i, '').replace(/_/g, ' ');
+                    const v = lastData[k];
+                    priceMoveHtml += `<div class="small text-muted">${tf}: <strong>${(v !== undefined && v !== null) ? fmtNum(v, 3) : '-'}</strong></div>`;
+                });
+            }
 
             let rawStr = '-';
             try { rawStr = lastRaw ? JSON.stringify(lastRaw, null, 2) : '-'; } catch (e) { rawStr = '-'; }
@@ -429,23 +484,20 @@
 
             const html = `
                 <div class="card bg-dark text-light mb-2 p-3">
-                    <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h5 class="mb-1">🔧 Runtime Status</h5>
-                            <div class="small text-muted">WebSocket: <strong>${wsState}</strong> ${wsHeartbeatStatus}</div>
-                            <div class="small text-muted">Message Rate: <strong>${msgRate}</strong></div>
-                            <div class="small text-muted">Coins tracked: <strong>${coinCount}</strong></div>
-                            <div class="small text-muted">Last update: <strong>${lastTs ? new Date(lastTs).toLocaleString() : '-'}</strong></div>
-                            <div class="small text-muted">🧵 Workers: <strong>${wpStatus}</strong></div>
+                            <strong>Runtime:</strong>
+                            <span class="ms-2">WS: <span class="fw-bold">${wsState}</span></span>
+                            <span class="ms-2">${wsHeartbeatStatus}</span>
+                            <span class="ms-2">Msgs: <span class="fw-bold">${msgRate}</span></span>
+                            <span class="ms-2">Coins: <span class="fw-bold">${coinCount}</span></span>
+                            <span class="ms-2">Workers: <span class="fw-bold">${wpStats ? wpStats.workers : 'N/A'}</span></span>
                         </div>
-                        <div class="text-end">
-                            <div class="small text-muted">Persist enabled: <strong>${persistHistoryEnabled ? 'Yes' : 'No'}</strong></div>
-                            <div class="small text-muted">Persisted coins: <strong>${persistedCoins}</strong></div>
-                            <div class="small text-muted">Stored alerts: <strong>${alerts.length}</strong></div>
-                            <div class="small text-muted">🧵 Tasks done: <strong>${wpTasks}</strong> (avg ${wpAvgTime}ms)</div>
+                        <div class="text-end small text-muted">
+                            <div>Last update: <strong>${lastTs ? new Date(lastTs).toLocaleString() : '-'}</strong></div>
                         </div>
                     </div>
-                    <hr/>
+                    <hr class="my-2"/>
                     <div class="row">
                         <div class="col-md-6">
                             <h6 class="mb-1">📄 Last Raw JSON</h6>
@@ -456,6 +508,7 @@
                             <div class="small text-muted">Coin: <strong>${lastData && lastData.coin ? lastData.coin : '-'}</strong></div>
                             <div class="small text-muted">Last Price: <strong>${lastData && (lastData.last !== undefined) ? lastData.last : '-'}</strong></div>
                             <div class="small text-muted">Change %: <strong>${lastData && (lastData.percent_change !== undefined) ? lastData.percent_change : '-'}</strong></div>
+                            ${priceMoveHtml ? `<div class="small text-muted mt-1"><strong>Price Moves:</strong>${priceMoveHtml}</div>` : ''}
                             <div class="small text-muted">Total Vol: <strong>${lastData && (lastData.total_vol !== undefined) ? lastData.total_vol : '-'}</strong></div>
                             <div class="small text-muted">Update Time: <strong>${lastUpdateHuman}</strong></div>
                             <hr class="my-2"/>
@@ -487,7 +540,15 @@
                                 <div>Persistence (Freq): <strong>${persistenceFreq}</strong></div>
                                 <div>Risk Score: <strong>${analytics && analytics.riskScore !== undefined ? analytics.riskScore + '%' : '-'}</strong></div>
                                 <div>Sharp Insights: <strong>${sharpInsights}</strong></div>
-                                <div>Recommendation: <strong>${recSnapshot ? recSnapshot.recommendation : 'HOLD'}${recSnapshot ? ` (${recSnapshot.confidence}% | ${fmtNum(recSnapshot.score, 2)})` : ''}</strong></div>
+                                <div class="mt-2"><strong>Recommendation snapshot (per timeframe):</strong></div>
+                                <div class="table-responsive small mt-1" style="max-height:180px;overflow:auto;">
+                                    <table class="table table-sm table-dark table-striped mb-0">
+                                        <thead><tr><th>TF</th><th>Rec</th><th>Conf</th><th>TP</th><th>SL</th></tr></thead>
+                                        <tbody>
+                                            ${perTfHtml || '<tr><td colspan="5">No data</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                         ${smartHtml}

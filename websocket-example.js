@@ -609,6 +609,15 @@
 
         window.onWsMessage = function onWsMessage(event) {
             const raw = JSON.parse(event.data);
+            // If incoming message nests actual fields under `data`/`payload`/`message`, flatten them
+            try {
+                const nested = raw && (raw.data || raw.payload || raw.message);
+                if (nested && typeof nested === 'object') {
+                    for (const k of Object.keys(nested)) {
+                        if (raw[k] === undefined) raw[k] = nested[k];
+                    }
+                }
+            } catch (e) { /* ignore flatten errors */ }
             const coin = raw.coin; // Extract the coin from data
             // store last raw message and coin for UI inspection
             try { window._lastWsRaw = raw; window._lastReceivedCoin = coin; } catch (e) { }
@@ -676,7 +685,9 @@
                 /^count_freq_/i,
                 /^freq_/i,
                 /^avg_freqcoin_/i,
-                /^update_time_(?:freq|vol)_/i
+                /^update_time_(?:freq|vol)_/i,
+                // preserve price-related fields (open, price_1MENIT, price_move_1MENIT, etc.)
+                /^price_/i
             ];
             for (const key in raw) {
                 if (data[key] !== undefined || raw[key] === undefined) continue;

@@ -65,6 +65,7 @@
                     <option value="price_position" selected>Loading...</option>
                 </select>
             </div>
+            
             <div class="col-md-4">
                 <label class="form-label">📈 Sort Order</label>
                 <div id="sortOrder" class="d-flex gap-2 align-items-center">
@@ -119,6 +120,7 @@
                 <button class="nav-link" id="volratio-tab" data-bs-toggle="tab" data-bs-target="#volRatio" type="button"
                     role="tab">📈 Vol Ratio</button>
             </li>
+            
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="vol-dur-tab" data-bs-toggle="tab" data-bs-target="#volDur" type="button"
                     role="tab">📈 Vol Dur</button>
@@ -170,6 +172,9 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="freqratio-tab" data-bs-toggle="tab" data-bs-target="#freqRatio"
                     type="button" role="tab">📈 Freq Ratio</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="price-moves-tab" data-bs-toggle="tab" data-bs-target="#priceMoves" type="button" role="tab">💹 Price Moves</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="smart-tab" data-bs-toggle="tab" data-bs-target="#smartAnalysis"
@@ -271,6 +276,29 @@
                 </div>
             </div>
 
+            <div class="tab-pane fade" id="priceMoves" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="priceMovesTable">
+                        <thead>
+                            <tr>
+                                <th>Coin</th>
+                                <th>1m</th>
+                                <th>5m</th>
+                                <th>10m</th>
+                                <th>15m</th>
+                                <th>20m</th>
+                                <th>30m</th>
+                                <th>1h</th>
+                                <th>2h</th>
+                                <th>24h</th>
+                                <th>Update</th>
+                            </tr>
+                        </thead>
+                        <tbody id="priceMovesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="tab-pane fade" id="volDur" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-striped" id="volDurTable">
@@ -294,6 +322,8 @@
             </div>
 
             <div class="tab-pane fade" id="microstructure" role="tabpanel">
+
+            
                 <div class="table-responsive">
                     <table class="table table-striped" id="microTable">
                         <thead>
